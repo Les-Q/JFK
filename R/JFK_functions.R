@@ -9,7 +9,7 @@ require(magick)
 
 import_ocr_doc <- function(full_pdf_url, page ){
   
-  bitmap <- pdftools::pdf_render_page(local_pdf, page=1, dpi = 400, numeric=TRUE)
+  bitmap <- pdftools::pdf_render_page(local_pdf, page=page, dpi = 400, numeric=TRUE)
   
   # bread-and-butter way
   # tiff::writeTIFF(bitmap, "C:/Users/Bonny/Documents/JFK/tiff/page.tiff")
