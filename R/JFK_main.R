@@ -66,12 +66,12 @@ handwritten_mask <- grepl('HANDWRITTEN', doc_list$Comments) # | grepl('NOTES', d
 
 doc_raw_txt <- data.frame(Doc.Index=doc_list$Doc.Index,
                           First.Page = as.character(NA),
-                          Body.Text = as.character(NA)) %>% tbl_df()
+                          Body.Text = as.character(NA),stringsAsFactors = FALSE) %>% tbl_df()
 
 
 doc_kw <- data.frame(Doc.Index=doc_list$Doc.Index,
                      Keyword = as.character(NA),
-                     Count = as.integer(NA) ) %>% tbl_df()
+                     Count = as.integer(NA) ,stringsAsFactors = FALSE) %>% tbl_df()
 
 for (id in doc_list$Doc.Index[!handwritten_mask]){
   t0 <- Sys.time()
