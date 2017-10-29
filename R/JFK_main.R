@@ -85,7 +85,7 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   n_pages <- doc_info$pages
   
   if(n_pages<2){
-    print(paste0("ID=",id,"   Document has ",n_pages," pages. Skipping to the next doc."))
+    warning(paste0("ID=",id,"   Document has ",n_pages," pages. Skipping to the next doc."))
   }
   
   ###  import the text, save raw values to the appropriate tibble
