@@ -17,6 +17,10 @@ if(! require(magick)){
 # get directory of this script and move up by one dir; works only if you are sourcing the script
 work_dir <- strsplit(dirname(sys.frame(1)$ofile),split='/')[[1]] 
 work_dir <- paste(work_dir[-length(work_dir)],collapse = '/')
+tmp_dir  <- paste0(work_dir,"/tmp/")
+if(!dir.exists(tmp_dir)){
+  dir.create(tmp_dir,recursive = TRUE, showWarnings = FALSE)
+}
 
 #import helper functions
 source(paste0(work_dir,"/R/JFK_functions.R"))
@@ -75,7 +79,7 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   pdf_url <- paste0(base_url,doc_list$File.Name[id])
   
   ### download the original pdf, extract basic metadata
-  local_pdf = paste0(work_dir,"/doc_tmp.pdf")
+  local_pdf = paste0(tmp_dir,"/doc_tmp.pdf")
   download.file(pdf_url, destfile = local_pdf, method='auto', cacheOK = FALSE, mode='wb' )
   doc_info <- pdftools::pdf_info(local_pdf)
   n_pages <- doc_info$pages
