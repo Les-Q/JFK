@@ -47,12 +47,18 @@ doc_list <- doc_list %>% mutate(File.Name = tolower(File.Name),
   mutate(Doc.Type = gsub('[[:punct:]]+','',Doc.Type)) %>%
   mutate(Doc.Type = gsub('  +',' ',Doc.Type)) 
 
-
 old_cols <- names(doc_list)
 doc_list$Doc.Index <- seq(1, nrow(doc_list),1)
 doc_list <- doc_list[,c('Doc.Index',old_cols)]
 unique(doc_list$Doc.Type)
-#remove handwritten notes
+
+#add more columns with metadata and flags
+doc_list$isCONV <- 0
+doc_list$isMEMO <- 0
+doc_list$isREPORT <- 0
+
+
+#do not process handwritten notes
 handwritten_mask <- grepl('HANDWRITTEN', doc_list$Comments) # | grepl('NOTES', doc_list$Doc.Type) 
 
 
