@@ -5,6 +5,7 @@ library(magrittr)
 library(dplyr)
 library(tidyr)
 library(tm)
+library(SnowballC)
 
 if(! require(magick)){
   library(devtools)
@@ -17,6 +18,8 @@ if(! require(magick)){
 # get directory of this script and move up by one dir; works only if you are sourcing the script
 work_dir <- strsplit(dirname(sys.frame(1)$ofile),split='/')[[1]] 
 work_dir <- paste(work_dir[-length(work_dir)],collapse = '/')
+work_dir <- "C:/Users/Bonny/Documents/Projects/JFK"
+
 tmp_dir  <- paste0(work_dir,"/tmp/")
 if(!dir.exists(tmp_dir)){
   dir.create(tmp_dir,recursive = TRUE, showWarnings = FALSE)
