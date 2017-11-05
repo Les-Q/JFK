@@ -90,6 +90,7 @@ convert_special_to_space <- function(corpus){
   corpus <- tm_map(corpus, toSpace, "/")
   corpus <- tm_map(corpus, toSpace, "@")
   corpus <- tm_map(corpus, toSpace, "\\|")
+  corpus <- tm_map(corpus, toSpace, "\\\\n") # "\n"
   
   return(corpus)
 }
@@ -115,14 +116,11 @@ clean_corpus <- function( raw_corpus ){
   corpus <- tm_map(corpus, tm::removeWords, tm::stopwords("english"))
   
   # remove specific words 
-  corpus <- tm_map(corpus, removeWords, c("syllogism", "tautology"))  
+  corpus <- tm_map(corpus, removeWords, c("dont", "say", "can", "just", "now"))  
   
   # Text stemming (reduces words to their root form)
   corpus <- tm::tm_map(corpus, stemDocument)
   
-  
-  #This tells R to treat your preprocessed documents as text documents.
-  doc <- tm_map(doc, PlainTextDocument)
   
   return(corpus)
 }# end clean_corpus
