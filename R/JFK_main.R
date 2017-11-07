@@ -103,10 +103,6 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   doc_info <- pdftools::pdf_info(local_pdf)
   n_pages <- doc_info$pages
   
-  if(n_pages<2){
-    warning(paste0("ID=",id,"   Document has ",n_pages," pages. Skipping to the next doc."))
-  }
-  
   
   ###  import the text, save raw values to the appropriate tibble
   ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
@@ -115,6 +111,10 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   doc_list[id, "Conv.Flag"]   <- grepl(pattern = "CONVERSATION",x = toupper(first_page) )
   doc_list[id, "Report.Flag"] <- grepl(pattern = "REPORT",x = toupper(first_page) )
   doc_list[id, "Memo.Flag"]   <- grepl(pattern = "MEMO",  x = toupper(first_page) )
+  
+  if(n_pages<2){
+    warning(paste0("ID=",id,"   Document has ",n_pages," pages. Skipping to the next doc."))
+  }
   
   ### loop through pages, OCR them one-by-one
   raw_body_text <- as.character(NA)
