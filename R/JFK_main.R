@@ -173,6 +173,7 @@ doc_raw_txt <- dplyr::inner_join( x=doc_list %>% dplyr::select(Doc.Index, Title,
                            by = 'Doc.Index') %>% mutate(Doc.Date= format(Doc.Date,"%Y-%m-%d"))
 m <- list(content = 'Body.Text', heading='Title', date='Doc.Date', id='Doc.Index', origin='Originator' , series='Record.Series', type='Doc.Type')
 df_doc_reader <- tm::readTabular(mapping = m)
+
 doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerControl = list(reader = df_doc_reader))
 
 ### you can inspect the metadata for a given document in this way
@@ -180,25 +181,25 @@ meta(doc_corpus[[65]])
 
 ### you can filter on metadata by creating an index and then applying it to the corpus
 sel_date_idx <- unlist( lapply( meta(doc_corpus, "date") , FUN=function(x){ return( as.POSIXct(x) > as.POSIXct("1974-01-01") ) }) )
-sel_orig_idx <- unlist( lapply( meta(doc_corpus, "origin"), FUN=function(x){return(  x== 'FBI')}) ) 
-doc_corpus[sel_cod_idx & sel_orig_idx]
+sel_orig_idx <- unlist( lapply( meta(doc_corpus, "origin"), FUN=function(x){return(  x== 'WH')}) ) 
+sel_corpus <- doc_corpus[sel_cod_idx & sel_orig_idx]
 
 ### exactly the same thing using the tm_filter function
-sel_corp <- tm::tm_filter(doc_corpus, 
+sel_corpus <- tm::tm_filter(doc_corpus, 
                           FUN = function(x){
                             tmp_date<- as.POSIXct(meta(x)[['date']])
                             tmp_orig <- meta(x)[['origin']]
                             return( (tmp_orig=='FBI') & (tmp_date> as.POSIXct('1974-01-01')) ) })
 
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
-doc <- clean_corpus(doc)
+doc_corpus <- clean_corpus(doc_corpus)
 
 
 #This tells R to treat your preprocessed documents as text documents.
 doc <- tm_map(doc, PlainTextDocument)
 
 # if you want you can print the text in the corpus
-writeLines(as.character(doc[1]))
+writeLines(as.character(sel_corpus[1]))
 
 
 #################################
