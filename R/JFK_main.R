@@ -196,7 +196,7 @@ if(! check_corpus_non_empty(sel_corpus) ){ #check_corpus_non_empty defined in JF
 }
 
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
-doc_corpus <- clean_corpus(doc_corpus)
+doc_corpus <- clean_corpus(doc_corpus, stemming=FALSE)
 
 
 #This tells R to treat your preprocessed documents as text documents.
