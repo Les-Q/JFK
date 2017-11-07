@@ -84,6 +84,8 @@ doc_kw <- data.frame(Doc.Index=doc_list$Doc.Index,
                      Keyword = as.character(NA),
                      Count = as.integer(NA) ,stringsAsFactors = FALSE) %>% tbl_df()
 
+doc_list_file <- paste0(work_dir,"/doc_list_tmp.rds")
+doc_raw_file <- paste0(work_dir,"/doc_rawtext_tmp.rds")
 ##########################################
 ####  STAGE 1: import and OCR
 ####  LOOP OVER ALL DOCS
@@ -136,12 +138,13 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   
   ### wrap up and move to next document
   print(paste("Saving outputs to tmp caches in ",work_dir) )
-  saveRDS(doc_list, file = paste0(work_dir,"/doc_list_tmp.rds"))
-  saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext_tmp.rds"))
+  saveRDS(doc_list, file = doc_list_file)
+  saveRDS(doc_raw_txt, file = doc_raw_file)
   
 }#end for loop over id (loop over list of docs)
 
 print(paste("Finished to loop over documents at ",Sys.time()))
+print(paste("All documents imported and saved to file ",doc_raw_file) )
 ##############################
 
 stop("Terminating process after STAGE 1")
@@ -149,6 +152,7 @@ stop("Terminating process after STAGE 1")
 ###################################
 #### STAGE 2: pre-processing
 
+print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
 for(id in doc_raw_txt$Doc.Index){
   raw_body_test <- doc_raw_txt[id, 'Raw.Body.Text']
@@ -162,6 +166,7 @@ saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_text.rds"))
 
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
 ### to get rid of unwanted/unnecessary features 
+print("Creating a corpus")
 doc <- tm::Corpus(tm::VectorSource(strsplit(doc, " ") ) )
 
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
