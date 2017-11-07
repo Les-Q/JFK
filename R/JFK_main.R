@@ -62,10 +62,10 @@ doc_list <- doc_list[,c('Doc.Index',old_cols)]
 unique(doc_list$Doc.Type)
 
 #add more columns with metadata and flags
-doc_list$isCONV <- 0
-doc_list$isMEMO <- 0
-doc_list$isREPORT <- 0
-
+doc_list$Conv.Flag <- 0
+doc_list$Memo.Flag <- 0
+doc_list$Report.Flag <- 0
+doc_list$Import.Time.Sec <- as.integer(NA) 
 
 #do not process handwritten notes
 handwritten_mask <- grepl('HANDWRITTEN', doc_list$Comments) # | grepl('NOTES', doc_list$Doc.Type) 
@@ -81,6 +81,7 @@ doc_raw_txt <- data.frame(Doc.Index=doc_list$Doc.Index,
 doc_kw <- data.frame(Doc.Index=doc_list$Doc.Index,
                      Keyword = as.character(NA),
                      Count = as.integer(NA) ,stringsAsFactors = FALSE) %>% tbl_df()
+
 
 for (id in doc_list$Doc.Index[!handwritten_mask]){
   t0 <- Sys.time()
@@ -102,6 +103,45 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   if(n_pages<2){
     warning(paste0("ID=",id,"   Document has ",n_pages," pages. Skipping to the next doc."))
   }
+  
+  
+  ###  import the text, save raw values to the appropriate tibble
+  ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
+  first_page <- import_ocr_doc(local_pdf, 1) 
+  doc_list[id, "Conv.Flag"]   <- grep(pattern = "CONVERSATION",x = toupper(first_page) )
+  doc_list[id, "Report.Flag"] <- grep(pattern = "REPORT",x = toupper(first_page) )
+  doc_list[id, "Memo.Flag"]   <- grep(pattern = "MEMO",  x = toupper(first_page) )
+  
+  ### loop through pages, OCR them one-by-one
+  raw_body_text <- character()
+  for(iP in seq(2,n_pages,1) ){
+    print(paste("Page",iP,"of",n_pages))
+    tmp_txt <- import_ocr_doc(local_pdf, iP) 
+    raw_body_text <- paste(raw_body_text,tmp_txt, sep = " ")
+  }# end loop on pages of pdf
+  
+  # save raw imported text to df
+  doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Page'] <- first_page
+  doc_raw_txt[doc_raw_txt$Doc.Index==id,'Body.Text'] <- raw_body_text
+  
+  t1 <- Sys.time()
+  writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(t1-t0))," seconds\n"  ) )
+  
+  doc_list[id, "Import.Time.Sec"] <- round(t1-t0) 
+  
+  ### wrap up and move to next document
+  print(paste("Saving outputs to tmp caches in ",work_dir) )
+  saveRDS(doc_list, file = paste0(work_dir,"/doc_list_tmp.rds"))
+  saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext_tmp.rds"))
+  saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords_tmp.rds"))
+  
+  
+  
+}#end for loop over id (loop over list of docs)
+
+  
+  ####%%%%%%%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  
   
   ###  import the text, save raw values to the appropriate tibble
   ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
@@ -128,16 +168,6 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   ### store key words frequency in tibble
   
   
-  ### wrap up and move to next document
-  print(paste("Saving outputs to tmp caches in ",work_dir) )
-  saveRDS(doc_list, file = paste0(work_dir,"/doc_list_tmp.rds"))
-  saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext_tmp.rds"))
-  saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords_tmp.rds"))
-  t1 <- Sys.time()
-  writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(t1-t0))," seconds\n"  ) )
-  
-}#end loop over docs
-
 saveRDS(doc_list, file = paste0(work_dir,"/doc_list.rds"))
 saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext.rds"))
 saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
