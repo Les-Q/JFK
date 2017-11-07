@@ -156,7 +156,7 @@ doc_raw_txt <- readRDS(doc_raw_file)
 print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
 for(id in dplyr::filter(doc_raw_txt, !is.na(Raw.Body.Text))$Doc.Index){
-  raw_body_test <- doc_raw_txt[id, 'Raw.Body.Text']
+  raw_body_text <- doc_raw_txt[id, 'Raw.Body.Text']
   doc <- remove_non_ascii(raw_body_text)
   doc <- remove_nonwords(doc)
   doc_raw_txt[id, 'Body.Text'] <- doc
@@ -200,16 +200,16 @@ doc_corpus <- clean_corpus(doc_corpus)
 
 
 #This tells R to treat your preprocessed documents as text documents.
-doc <- tm_map(doc, PlainTextDocument)
+doc_corpus <- tm_map(doc_corpus, PlainTextDocument)
 
 # if you want you can print the text in the corpus
-writeLines(as.character(sel_corpus[1]))
+writeLines(as.character(doc_corpus[19]))
 
 
 #################################
 #### STAGE 3: analysis
 
-dtm <- TermDocumentMatrix(doc)
+dtm <- TermDocumentMatrix(doc_corpus)
 m <- as.matrix(dtm)
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
