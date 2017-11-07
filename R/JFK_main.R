@@ -36,8 +36,8 @@ source(paste0(work_dir,"/R/JFK_functions.R"))
 
 base_url <- "https://www.archives.gov/files/research/jfk/releases/"  # HTTP URL where all pdfs are accessible
 # range of docs to process
-min_id <- 6 # set to 0 for startign since first doc in list
-max_id <- 7 # set to Inf to process till the end of doc list
+min_id <- 1 # set to 0 for startign since first doc in list
+max_id <- 100 # set to Inf to process till the end of doc list
 
 
 ###################################################################
@@ -85,7 +85,8 @@ doc_kw <- data.frame(Doc.Index=doc_list$Doc.Index,
                      Count = as.integer(NA) ,stringsAsFactors = FALSE) %>% tbl_df()
 
 ##########################################
-#### LOOP OVER ALL DOCS
+####  STAGE 1: import and OCR
+####  LOOP OVER ALL DOCS
 for (id in doc_list$Doc.Index[!handwritten_mask]){
   t0 <- Sys.time()
   ### process only docs in the range specified by user
@@ -129,8 +130,8 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'Raw.Body.Text'] <- raw_body_text
 
   ### keep track of processing time
-  delta_t <- difftime(Sys.time(), t0, units="seconds")
-  writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(delta_t)," seconds\n"  ) ))
+  delta_t <- difftime(Sys.time(), t0, units="secs")
+  writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(delta_t))," seconds\n" ))
   doc_list[id, "Import.Time.Sec"] <- round(delta_t) 
   
   ### wrap up and move to next document
@@ -143,15 +144,18 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
 print(paste("Finished to loop over documents at ",Sys.time()))
 ##############################
 
-
+stop("Terminating process after STAGE 1")
 
 ###################################
-#### PHASE 2: pre-processing
+#### STAGE 2: pre-processing
 
 ### loop on raw body text and for each one clean up text 
 
 doc <- remove_non_ascii(raw_body_text)
 doc <- remove_nonwords(doc)
+
+saveRDS(doc_list, file = paste0(work_dir,"/doc_list.rds"))
+saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext.rds"))
 
 
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
@@ -165,39 +169,21 @@ doc <- clean_corpus(doc)
 #This tells R to treat your preprocessed documents as text documents.
 doc <- tm_map(doc, PlainTextDocument)
 
-  
-  ####%%%%%%%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords_tmp.rds"))
 
-  
-  ###  import the text, save raw values to the appropriate tibble
-  ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
-  first_page <- import_ocr_doc(local_pdf, 1) 
-  is_conv <- grep(pattern = "CONVERSATION",x = toupper(first_page) )
-  is_repo <- grep(pattern = "REPORT",x = toupper(first_page) )
-  is_memo <- grep(pattern = "MEMO",  x = toupper(first_page) )
-  
-  raw_body_text <- character()
-  for(iP in seq(2,n_pages,1)){
-    tmp_txt <- import_ocr_doc(local_pdf, iP) 
-    raw_body_text <- paste(raw_body_text,tmp_txt, sep = " ")
-  }# end loop on pages of pdf
-  
-  doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Page'] <- first_page
-  doc_raw_txt[doc_raw_txt$Doc.Index==id,'Body.Text'] <- raw_body_text
-  
-  ### clean up text 
-  
-  
-  ### do smtg smart to extract key words
-  
-  
-  ### store key words frequency in tibble
-  
-  
-saveRDS(doc_list, file = paste0(work_dir,"/doc_list.rds"))
-saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext.rds"))
-saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
+#################################
+#### STAGE 3: analysis
+
+dtm <- TermDocumentMatrix(doc)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+
+
+
+
+ saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
 
 
 ### here you run the proper ML analysis
