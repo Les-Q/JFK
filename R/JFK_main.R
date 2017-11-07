@@ -148,6 +148,7 @@ print(paste("All documents imported and saved to file ",doc_raw_file) )
 ##############################
 
 stop("Terminating process after STAGE 1")
+doc_raw_txt <- readRDS(doc_raw_file)
 
 ###################################
 #### STAGE 2: pre-processing
@@ -158,10 +159,10 @@ for(id in doc_raw_txt$Doc.Index){
   raw_body_test <- doc_raw_txt[id, 'Raw.Body.Text']
   doc <- remove_non_ascii(raw_body_text)
   doc <- remove_nonwords(doc)
-  doc_raw_txt[id, 'Raw.Body.Text'] <- doc
+  doc_raw_txt[id, 'Body.Text'] <- doc
 }
-
-saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_text.rds"))
+doc_txt_file <- paste0(work_dir,"/doc_text.rds")
+saveRDS(doc_raw_txt, file = doc_txt_file)
 
 
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
