@@ -116,7 +116,7 @@ clean_corpus <- function( raw_corpus , stemming=FALSE, excl_words=NA){
   corpus <- tm_map(corpus, tm::removeWords, tm::stopwords("english"))
   
   # remove specific words 
-  words_blacklist <- c("dont", "say", "can", "just", "now")
+  words_blacklist <- c("dont", "say", "can", "just", "now", "made", "one", "said", "also")
   if(length(excl_words[!is.na(excl_words)])>0){
     if(is.character(excl_words)){
       words_blacklist <- c(words_blacklist, excl_words)
