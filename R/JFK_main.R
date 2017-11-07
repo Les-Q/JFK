@@ -177,26 +177,26 @@ df_doc_reader <- tm::readTabular(mapping = m)
 doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerControl = list(reader = df_doc_reader))
 
 ### you can inspect the metadata for a given document in this way
-meta(doc_corpus[[65]])
+#meta(doc_corpus[[65]])
 
 ### you can filter on metadata by creating an index and then applying it to the corpus
-sel_date_idx <- unlist( lapply( meta(doc_corpus, "date") , FUN=function(x){ return( as.POSIXct(x) > as.POSIXct("1974-01-01") ) }) )
-sel_orig_idx <- unlist( lapply( meta(doc_corpus, "origin"), FUN=function(x){return(  x== 'WH')}) ) 
-sel_corpus <- doc_corpus[sel_cod_idx & sel_orig_idx]
+# sel_date_idx <- unlist( lapply( meta(doc_corpus, "date") , FUN=function(x){ return( as.POSIXct(x) > as.POSIXct("1974-01-01") ) }) )
+# sel_orig_idx <- unlist( lapply( meta(doc_corpus, "origin"), FUN=function(x){return(  x== 'WH')}) ) 
+# sel_corpus <- doc_corpus[sel_cod_idx & sel_orig_idx]
 
 ### exactly the same thing using the tm_filter function
-sel_corpus <- tm::tm_filter(doc_corpus, 
-                          FUN = function(x){
-                            tmp_date<- as.POSIXct(meta(x)[['date']])
-                            tmp_orig <- meta(x)[['origin']]
-                            return( (tmp_orig=='WH') & (tmp_date> as.POSIXct('1974-01-01')) ) })
-
-if(! check_corpus_non_empty(sel_corpus) ){ #check_corpus_non_empty defined in JFK_functions.py
-  warning("Warning! the selected subset of the corpus is empty!")
-}
+# sel_corpus <- tm::tm_filter(doc_corpus, 
+#                           FUN = function(x){
+#                             tmp_date<- as.POSIXct(meta(x)[['date']])
+#                             tmp_orig <- meta(x)[['origin']]
+#                             return( (tmp_orig=='WH') & (tmp_date> as.POSIXct('1974-01-01')) ) })
+# 
+# if(! check_corpus_non_empty(sel_corpus) ){ #check_corpus_non_empty defined in JFK_functions.py
+#   warning("Warning! the selected subset of the corpus is empty!")
+# }
 
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
-doc_corpus <- clean_corpus(doc_corpus, stemming=FALSE)
+doc_corpus <- clean_corpus(doc_corpus, stemming=FALSE, excl_words=c('said','page', 'new'))
 
 
 #This tells R to treat your preprocessed documents as text documents.

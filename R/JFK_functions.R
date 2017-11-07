@@ -96,7 +96,7 @@ convert_special_to_space <- function(corpus){
 }
 
 
-clean_corpus <- function( raw_corpus , stemming=FALSE){
+clean_corpus <- function( raw_corpus , stemming=FALSE, excl_words=NA){
   
   # Convert the text to lower case
   corpus <- tm::tm_map(raw_corpus, tm::content_transformer(tolower))
@@ -116,7 +116,16 @@ clean_corpus <- function( raw_corpus , stemming=FALSE){
   corpus <- tm_map(corpus, tm::removeWords, tm::stopwords("english"))
   
   # remove specific words 
-  corpus <- tm_map(corpus, removeWords, c("dont", "say", "can", "just", "now"))  
+  words_blacklist <- c("dont", "say", "can", "just", "now")
+  if(length(excl_words[!is.na(excl_words)])>0){
+    if(is.character(excl_words)){
+      words_blacklist <- c(words_blacklist, excl_words)
+    }
+    else{
+      warning("WARNING from clean_corpus! Input argument excl_words is not of class 'character'. It will be ignored.")
+    }
+  }
+  corpus <- tm_map(corpus, removeWords, words_blacklist)  
   
   if(stemming){
     # Text stemming (reduces words to their root form). Uses the SnowballC package
