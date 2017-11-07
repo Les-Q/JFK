@@ -112,13 +112,11 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
   print("importing first page")
   first_page <- import_ocr_doc(local_pdf, 1) 
-  print("ok")
-  doc_list[id, "Conv.Flag"]   <- grep(pattern = "CONVERSATION",x = toupper(first_page) )
-  doc_list[id, "Report.Flag"] <- grep(pattern = "REPORT",x = toupper(first_page) )
-  doc_list[id, "Memo.Flag"]   <- grep(pattern = "MEMO",  x = toupper(first_page) )
+  doc_list[id, "Conv.Flag"]   <- grepl(pattern = "CONVERSATION",x = toupper(first_page) )
+  doc_list[id, "Report.Flag"] <- grepl(pattern = "REPORT",x = toupper(first_page) )
+  doc_list[id, "Memo.Flag"]   <- grepl(pattern = "MEMO",  x = toupper(first_page) )
   
   ### loop through pages, OCR them one-by-one
-  print("Looping through pages (OCR)")
   raw_body_text <- as.character(NA)
   for(iP in seq(2,n_pages,1) ){
     print(paste("Page",iP,"of",n_pages))
@@ -126,15 +124,14 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
     raw_body_text <- paste(raw_body_text,tmp_txt, sep = " ")
   }# end loop on pages of pdf
   
-  print("storing to df")
   # save raw imported text to df
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Page'] <- first_page
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'Raw.Body.Text'] <- raw_body_text
 
-  t1 <- Sys.time()
-  writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(t1-t0))," seconds\n"  ) )
-  
-  doc_list[id, "Import.Time.Sec"] <- round(t1-t0) 
+  ### keep track of processing time
+  delta_t <- difftime(Sys.time(), t0, units="seconds")
+  writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(delta_t)," seconds\n"  ) ))
+  doc_list[id, "Import.Time.Sec"] <- round(delta_t) 
   
   ### wrap up and move to next document
   print(paste("Saving outputs to tmp caches in ",work_dir) )
