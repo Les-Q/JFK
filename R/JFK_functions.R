@@ -29,7 +29,7 @@ import_ocr_doc <- function(full_pdf_url, page ){
     magick::image_convert(colorspace = 'gray') %>% #assume all docs are black&white
     magick::image_trim() %>%
     magick::image_ocr() 
-
+  
   return(ocr_txt)
 }# end import_ocr_doc
 
@@ -79,7 +79,7 @@ remove_nonwords <- function(raw_dat){
 
 
 convert_special_to_space <- function(corpus){
-
+  
   # function that converts a series of special characteers
   # to a space, using the generic content transformer of tm.
   # Notice that the conversion to a space is just a conveninece:
@@ -111,7 +111,7 @@ clean_corpus <- function( raw_corpus ){
   
   # Eliminate extra white spaces
   corpus <- tm::tm_map(corpus, tm::stripWhitespace)
-
+  
   # Remove english common stopwords
   corpus <- tm_map(corpus, tm::removeWords, tm::stopwords("english"))
   
@@ -126,6 +126,29 @@ clean_corpus <- function( raw_corpus ){
 }# end clean_corpus
 
 
-
+check_corpus_non_empty <- function(c){
+  
+  ### Noticed that after filtering on metadata, the corpus might be empty
+  ### although of size >0, i.e. the length of the corpus is 1 but the length of the first
+  ### (and only) element of the corpus is zero. This function flags cases like this.
+  ### Input argument is an object of class Corpus
+  
+  non_empty <- NA
+  
+  if(length(c)<1){
+    non_empty <- FALSE
+  }else if(length(c)==1){
+    if(length(c[[1]]) < 1 ){
+      non_empty <- FALSE    
+    }else{
+      non_empty <- TRUE
+    }
+    
+  }else{
+    non_empty <- TRUE    
+  }
+  
+  return(non_empty)  
+}### end check_corpus_nonempty
 
 

@@ -189,7 +189,11 @@ sel_corpus <- tm::tm_filter(doc_corpus,
                           FUN = function(x){
                             tmp_date<- as.POSIXct(meta(x)[['date']])
                             tmp_orig <- meta(x)[['origin']]
-                            return( (tmp_orig=='FBI') & (tmp_date> as.POSIXct('1974-01-01')) ) })
+                            return( (tmp_orig=='WH') & (tmp_date> as.POSIXct('1974-01-01')) ) })
+
+if(! check_corpus_non_empty(sel_corpus) ){ #check_corpus_non_empty defined in JFK_functions.py
+  warning("Warning! the selected subset of the corpus is empty!")
+}
 
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
 doc_corpus <- clean_corpus(doc_corpus)
