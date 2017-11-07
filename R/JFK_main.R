@@ -52,7 +52,7 @@ doc_list <- doc_list %>% mutate(File.Name = tolower(File.Name),
                                 Comments = toupper(Comments),
                                 NARA.Release.Date = as.POSIXct(NARA.Release.Date, format="%m/%d/%Y"),
                                 Doc.Date = as.POSIXct(Doc.Date, format="%m/%d/%Y")) %>%
-  mutate(Doc.Date = ifelse(Doc.Date=="0000-01-01",NA, Doc.Date) ) %>%
+  mutate(Doc.Date = as.POSIXct( ifelse(Doc.Date=="0000-01-01",NA, Doc.Date)) ) %>%
   mutate(Doc.Type = gsub('[[:punct:]]+','',Doc.Type)) %>%
   mutate(Doc.Type = gsub('  +',' ',Doc.Type)) 
 
