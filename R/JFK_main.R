@@ -150,12 +150,14 @@ stop("Terminating process after STAGE 1")
 #### STAGE 2: pre-processing
 
 ### loop on raw body text and for each one clean up text 
+for(id in doc_raw_txt$Doc.Index){
+  raw_body_test <- doc_raw_txt[id, 'Raw.Body.Text']
+  doc <- remove_non_ascii(raw_body_text)
+  doc <- remove_nonwords(doc)
+  doc_raw_txt[id, 'Raw.Body.Text'] <- doc
+}
 
-doc <- remove_non_ascii(raw_body_text)
-doc <- remove_nonwords(doc)
-
-saveRDS(doc_list, file = paste0(work_dir,"/doc_list.rds"))
-saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext.rds"))
+saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_text.rds"))
 
 
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
@@ -168,6 +170,9 @@ doc <- clean_corpus(doc)
 
 #This tells R to treat your preprocessed documents as text documents.
 doc <- tm_map(doc, PlainTextDocument)
+
+# if you want you can print the text in the corpus
+writeLines(as.character(doc[1]))
 
 
 #################################
