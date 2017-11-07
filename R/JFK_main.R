@@ -36,8 +36,8 @@ source(paste0(work_dir,"/R/JFK_functions.R"))
 
 base_url <- "https://www.archives.gov/files/research/jfk/releases/"  # HTTP URL where all pdfs are accessible
 # range of docs to process
-min_id <- 3 # set to 0 for startign since first doc in list
-max_id <- 3 # set to Inf to process till the end of doc list
+min_id <- 6 # set to 0 for startign since first doc in list
+max_id <- 7 # set to Inf to process till the end of doc list
 
 
 ###################################################################
@@ -52,7 +52,7 @@ doc_list <- doc_list %>% mutate(File.Name = tolower(File.Name),
                                 Comments = toupper(Comments),
                                 NARA.Release.Date = as.POSIXct(NARA.Release.Date, format="%m/%d/%Y"),
                                 Doc.Date = as.POSIXct(Doc.Date, format="%m/%d/%Y")) %>%
-  mutate(ifelse(Doc.Date=="0000-01-01",NA, Doc.Date) ) %>%
+  mutate(Doc.Date = ifelse(Doc.Date=="0000-01-01",NA, Doc.Date) ) %>%
   mutate(Doc.Type = gsub('[[:punct:]]+','',Doc.Type)) %>%
   mutate(Doc.Type = gsub('  +',' ',Doc.Type)) 
 
@@ -75,14 +75,17 @@ handwritten_mask <- grepl('HANDWRITTEN', doc_list$Comments) # | grepl('NOTES', d
 
 doc_raw_txt <- data.frame(Doc.Index=doc_list$Doc.Index,
                           First.Page = as.character(NA),
-                          Body.Text = as.character(NA),stringsAsFactors = FALSE) %>% tbl_df()
+                          Raw.Body.Text = as.character(NA),
+                          Body.Text = as.character(NA),
+                          stringsAsFactors = FALSE) %>% tbl_df()
 
 
 doc_kw <- data.frame(Doc.Index=doc_list$Doc.Index,
                      Keyword = as.character(NA),
                      Count = as.integer(NA) ,stringsAsFactors = FALSE) %>% tbl_df()
 
-
+##########################################
+#### LOOP OVER ALL DOCS
 for (id in doc_list$Doc.Index[!handwritten_mask]){
   t0 <- Sys.time()
   ### process only docs in the range specified by user
@@ -107,23 +110,27 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   
   ###  import the text, save raw values to the appropriate tibble
   ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
+  print("importing first page")
   first_page <- import_ocr_doc(local_pdf, 1) 
+  print("ok")
   doc_list[id, "Conv.Flag"]   <- grep(pattern = "CONVERSATION",x = toupper(first_page) )
   doc_list[id, "Report.Flag"] <- grep(pattern = "REPORT",x = toupper(first_page) )
   doc_list[id, "Memo.Flag"]   <- grep(pattern = "MEMO",  x = toupper(first_page) )
   
   ### loop through pages, OCR them one-by-one
-  raw_body_text <- character()
+  print("Looping through pages (OCR)")
+  raw_body_text <- as.character(NA)
   for(iP in seq(2,n_pages,1) ){
     print(paste("Page",iP,"of",n_pages))
     tmp_txt <- import_ocr_doc(local_pdf, iP) 
     raw_body_text <- paste(raw_body_text,tmp_txt, sep = " ")
   }# end loop on pages of pdf
   
+  print("storing to df")
   # save raw imported text to df
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Page'] <- first_page
-  doc_raw_txt[doc_raw_txt$Doc.Index==id,'Body.Text'] <- raw_body_text
-  
+  doc_raw_txt[doc_raw_txt$Doc.Index==id,'Raw.Body.Text'] <- raw_body_text
+
   t1 <- Sys.time()
   writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(t1-t0))," seconds\n"  ) )
   
@@ -133,15 +140,38 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   print(paste("Saving outputs to tmp caches in ",work_dir) )
   saveRDS(doc_list, file = paste0(work_dir,"/doc_list_tmp.rds"))
   saveRDS(doc_raw_txt, file = paste0(work_dir,"/doc_rawtext_tmp.rds"))
-  saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords_tmp.rds"))
-  
-  
   
 }#end for loop over id (loop over list of docs)
 
+print(paste("Finished to loop over documents at ",Sys.time()))
+##############################
+
+
+
+###################################
+#### PHASE 2: pre-processing
+
+### loop on raw body text and for each one clean up text 
+
+doc <- remove_non_ascii(raw_body_text)
+doc <- remove_nonwords(doc)
+
+
+### create a TM corpus from the pre-cleaned texts and then apply further processing 
+### to get rid of unwanted/unnecessary features 
+doc <- tm::Corpus(tm::VectorSource(strsplit(doc, " ") ) )
+
+# clean up the corpus. Function clear_corpus in helper file JFK_functions.R
+doc <- clean_corpus(doc)
+
+
+#This tells R to treat your preprocessed documents as text documents.
+doc <- tm_map(doc, PlainTextDocument)
+
   
   ####%%%%%%%<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  
+saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords_tmp.rds"))
+
   
   ###  import the text, save raw values to the appropriate tibble
   ### import_ocr_doc defined in helper functions file import_df_ocr_functions.R
