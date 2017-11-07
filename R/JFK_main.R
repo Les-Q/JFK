@@ -16,9 +16,15 @@ if(! require(magick)){
 ################# USER INPUTS AND SETTINGS ########################
 
 # get directory of this script and move up by one dir; works only if you are sourcing the script
-work_dir <- strsplit(dirname(sys.frame(1)$ofile),split='/')[[1]] 
-work_dir <- paste(work_dir[-length(work_dir)],collapse = '/')
-work_dir <- "C:/Users/Bonny/Documents/Projects/JFK"
+tryCatch({
+  work_dir <- strsplit(dirname(sys.frame(1)$ofile),split='/')[[1]] 
+  work_dir <- paste(work_dir[-length(work_dir)],collapse = '/')
+}, error=function(e){
+  default_work_dir <- "C:/Users/Bonny/Documents/Projects/JFK/"
+  print(paste("You are probably running this in interactive mode Setting working dir to ", default_work_dir) )
+  work_dir <- default_work_dir 
+}# end error
+)# end tryCatch
 
 tmp_dir  <- paste0(work_dir,"/tmp/")
 if(!dir.exists(tmp_dir)){
@@ -30,8 +36,8 @@ source(paste0(work_dir,"/R/JFK_functions.R"))
 
 base_url <- "https://www.archives.gov/files/research/jfk/releases/"  # HTTP URL where all pdfs are accessible
 # range of docs to process
-min_id <- 0 # set to 0 for startign since first doc in list
-max_id <- 100 # set to Inf to process till the end of doc list
+min_id <- 3 # set to 0 for startign since first doc in list
+max_id <- 3 # set to Inf to process till the end of doc list
 
 
 ###################################################################
