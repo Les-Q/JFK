@@ -197,8 +197,9 @@ doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerCon
 
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
 doc_corpus <- clean_corpus(doc_corpus, stemming=FALSE, 
-                           excl_words=c('page', 'docid', 'made','stated', 'case',
-                                        'plans','will','report','memorandum', 'date')
+                           excl_words=c('page', 'docid', 'made','stated', 'case', 'general',
+                                        'plans','will','report','memorandum', 'date', 'time',
+                                        'state','library')
                            )
 
 
@@ -218,12 +219,12 @@ v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
 head(d, 20)
 
+if(! check_corpus_non_empty(sel_corpus) ){ #check_corpus_non_empty defined in JFK_functions.py
+  warning("Warning! the selected subset of the corpus is empty!")
+}
 
 
-
-
- saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
-
+#saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
 
 ### here you run the proper ML analysis
 
