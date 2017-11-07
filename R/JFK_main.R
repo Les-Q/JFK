@@ -155,7 +155,7 @@ doc_raw_txt <- readRDS(doc_raw_file)
 
 print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
-for(id in doc_raw_txt$Doc.Index){
+for(id in dplyr::filter(doc_raw_txt, !is.na(Raw.Body.Text))$Doc.Index){
   raw_body_test <- doc_raw_txt[id, 'Raw.Body.Text']
   doc <- remove_non_ascii(raw_body_text)
   doc <- remove_nonwords(doc)
@@ -168,12 +168,12 @@ saveRDS(doc_raw_txt, file = doc_txt_file)
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
 ### to get rid of unwanted/unnecessary features 
 print("Creating a corpus from data.frame")
-doc_raw_txt <- inner_join( x=doc_list %>% select(Doc.Index, Title, Doc.Date, Doc.Type, Record.Series) , 
-                           y=doc_raw_txt %>% filter(!is.na(Body.Text)) %>% select(Doc.Index, Body.Text) ,
+doc_raw_txt <- dplyr::inner_join( x=doc_list %>% dplyr::select(Doc.Index, Title, Doc.Date, Doc.Type, Record.Series) , 
+                           y=doc_raw_txt %>% dplyr::filter(!is.na(Body.Text)) %>% dplyr::select(Doc.Index, Body.Text) ,
                            by = 'Doc.Index')
 m <- list(content = 'Body.Text', heading='Title', date='Doc.Date')
 df_doc_reader <- tm::readTabular(mapping = m)
-doc<- tm::Corpus(DataframeSource(doc_raw_txt), readerControl = list(reader = df_doc_reader))
+doc<- tm::VCorpus(DataframeSource(doc_raw_txt), readerControl = list(reader = df_doc_reader))
 
 
 doc <- tm::Corpus(tm::VectorSource(strsplit(doc, " ") ) )
