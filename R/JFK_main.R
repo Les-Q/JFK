@@ -156,7 +156,7 @@ doc_raw_txt <- readRDS(doc_raw_file)
 print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
 for(id in dplyr::filter(doc_raw_txt, !is.na(Raw.Body.Text))$Doc.Index){
-  raw_body_text <- doc_raw_txt[id, 'Raw.Body.Text']
+  raw_body_text <- (doc_raw_txt[id, ])$Raw.Body.Text
   doc <- remove_non_ascii(raw_body_text)
   doc <- remove_nonwords(doc)
   doc_raw_txt[id, 'Body.Text'] <- doc
