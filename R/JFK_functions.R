@@ -68,15 +68,77 @@ remove_nonwords <- function(raw_dat){
   # indices of words made only by consonants and/or digits (2 or more letters)
   dat_ind2 <- grep(pattern="^[^aeiouAEIOU]{2,}$", x=dat)
   
+  # indices of words with 5 or more consonants in a row
+  dat_ind3 <- grep(pattern="^[^aeiouAEIOU]{5,}[[:alnum:]]*", x=dat)
+  dat_ind4 <- grep(pattern="^[[:alnum:]]*[^aeiouAEIOU]{5,}$", x=dat)
+  
+  
   # remove elements matching the previous indexes
-  dat <- dat[-c(dat_ind1, dat_ind2)]  
+  ind_remove <- sort( unique( c(dat_ind1, dat_ind2, dat_ind3, dat_ind4) ) )
+  dat <- dat[-ind_remove]  
   # convert vector back to a string, ready to be converted to a TM corpus
   dat <- paste(dat, collapse = " ")
   
   return(dat)
 }# end remove_nonwords
 
-
+replace_special_words <- function(raw_dat){
+  
+  ### function called in the first phase of pre-processing
+  ### It replaces some words of text with others.
+  ### Useful especially with names, uniforming them to a standard.
+  ### Example: 'Harvey Lee Oswald' is replaced everywhere with 'Oswald'
+  ### In this way, we don't spread into two different counts the occurrencies of
+  ### 'Harvey Lee Oswald' and 'oswald', consolidating the frequency
+  ### of referring to Oswald. 
+  ###
+  ### Notice that the order is important! First we replace 'Lee Oswald' with Oswald
+  ### and then we replace 'Harvey Oswald' with Oswald. This will cover automatically
+  ### the case of 'Harvey Lee Oswald'
+  ###
+  ### The regex [[:print:]] instead of spaces will cater for any blip in OCR
+  ### that introduced spurious characters in the text 
+  ### [[:print:]] ---> Printable characters ([[:alpha:]], [[:punct:]] and space)
+  ### The usage of the wild card'*' in conjunction with [[:print:]] is deemed
+  ### to be too risky, it can runcate wide portions of text. For safety, 
+  ### limit to a max of 4 the number of characters in between the key words.
+  ###
+  
+  dat <- gsub("lee[[:print:]]{1,4}oswald", "oswald", raw_dat)
+  dat <- gsub("harvey[[:print:]]{1,4}oswald", "oswald", dat)
+  dat <- gsub("[[:space::]]h[[:print:]]{1,2}l?[[:print:]]{1,3}oswald", "oswald", dat)
+  
+  dat <- gsub("gerald[[:print:]]{1,4}ford", "ford", dat)
+  dat <- gsub("fitzgerald[[:print:]]{1,4}Kennedy", "kennedy", dat)
+  dat <- gsub("john[[:print:]]{1,4}kennedy", "kennedy", dat)
+  dat <- gsub("[[:space::]]j[[:print:]]{1,2}f?[[:print:]]{1,3}kennedy", "kennedy", dat)
+  dat <- gsub("henry[[:print:]]{1,4}kissinger", "kissinger", dat)
+  dat <- gsub("fidel[[:print:]]{1,4}castro", "castro", dat)
+  
+  dat <- gsub("robert[[:print:]]{1,4}edwards", "edwards", dat)
+  dat <- gsub("[[:space::]]r[[:print:]]{1,4}edwards", "edwards", dat)
+  dat <- gsub("robert[[:print:]]{1,2}e?[[:print:]]{1,3}edwards", "edwards", dat)
+  
+  dat <- gsub("federal[[:print:]]{1,4}bureau[[:print:]]{1,4}investigation", "fbi", dat)
+  dat <- gsub("centtal[[:print:]]{1,4}intelligence[[:print:]]{1,4}agency", "cia", dat)
+  
+  ### other misspelled / poorly imported words
+  dat <- gsub("cmmunicationshave", "communications have", dat)
+  dat <- gsub("communicatiohshave", "communications have", dat)
+  dat <- gsub("hayessecurty", "high security", dat)
+  dat <- gsub("cancerning", "concerning", dat)
+  dat <- gsub("joee", "joe", dat)
+  dat <- gsub("dallasfile","dallas file",dat)
+  dat <- gsub("francsco","francisco",dat)
+  dat <- gsub("victimcivil","victim civil",dat)
+  dat <- gsub("withthe", "with the", dat)
+  dat <- gsub("leeoswald", "oswald", dat)
+  dat <- gsub("naziparty", "nazi party", dat)
+  
+  
+  return(dat)
+  
+}# end replace_special_words
 
 convert_special_to_space <- function(corpus){
   
@@ -116,7 +178,8 @@ clean_corpus <- function( raw_corpus , stemming=FALSE, excl_words=NA){
   corpus <- tm_map(corpus, tm::removeWords, tm::stopwords("english"))
   
   # remove specific words 
-  words_blacklist <- c("dont", "say", "can", "just", "now", "made", "one", "said", "also")
+  words_blacklist <- c("dont", "say", "can", "just",  
+                       "now", "made", "one", "said", "also")
   if(length(excl_words[!is.na(excl_words)])>0){
     if(is.character(excl_words)){
       words_blacklist <- c(words_blacklist, excl_words)
@@ -126,6 +189,19 @@ clean_corpus <- function( raw_corpus , stemming=FALSE, excl_words=NA){
     }
   }
   corpus <- tm_map(corpus, removeWords, words_blacklist)  
+  
+  # fix some words misspelled, / poorly imported
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "admieistrative", replacement = "administrative")
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "sepaxate", replacement = "separate")
+  
+  # this is going to merge two words that we want to consider as one
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "new orleans", replacement = "new_orleans")
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "san francisco", replacement = "san_francisco")
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "san antonio", replacement = "san_antonio")
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "attorney general", replacement = "attorney_general")
+  
+  
+  
   
   if(stemming){
     # Text stemming (reduces words to their root form). Uses the SnowballC package
