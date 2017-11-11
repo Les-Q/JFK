@@ -44,11 +44,8 @@ import_ocr_doc <- function(full_pdf_url, page ){
     #magick::image_enhance(.) %>%# not very effective
     magick::image_trim() 
   
-  # test_png <- gsub(".pdf", ".png", full_pdf_url)
-  #print(paste("savign to ", test_png))
-  # image_write(ocr_txt, test_png)
-  print(ocr_txt)
-  # 
+  #print(ocr_txt)
+   
   ocr_txt <- ocr_txt %>%
              magick::image_ocr(options=tesseract_options) 
   
