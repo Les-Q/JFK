@@ -25,8 +25,11 @@ import_ocr_doc <- function(full_pdf_url, page ){
   # cleaning the bitmap with magick gives typically better results; 
   # magick::image_ocr is based on tesseract::ocr
   tesseract_options = list(  gapmap_no_isolated_quanta='1', #segment_debug='1',
-                             textord_words_default_nonspace='0.5', classify_min_slope='0.2', 
-                            # textord_xheight_error_margin='0.05',
+                             #textord_heavy_nr='1', # not very effective
+                             textord_words_default_nonspace='0.5', 
+                             classify_min_slope='0.2', 
+                             textord_xheight_error_margin='0.5',
+                             textord_max_noise_size='7', #def = 7
                              words_default_fixed_limit='0.3')
   #textord_max_noise_size='4') #,tessedit_char_whitelist = "0123456789")  textord_heavy_nr='1'
   ocr_txt <- magick::image_read(bitmap) %>% #"C:/Users/Bonny/Documents/JFK/png/page.png") %>%
@@ -38,7 +41,7 @@ import_ocr_doc <- function(full_pdf_url, page ){
     magick::image_contrast(sharpen = 10) %>%
     magick::image_convolve(kernel = "LoG:0x2", scaling="300%,100%") %>%
     #magick::image_convolve(kernel = "Diamond", scaling="100%!") %>%
-    #magick::image_enhance(.) %>%
+    #magick::image_enhance(.) %>%# not very effective
     magick::image_trim() 
   
   # test_png <- gsub(".pdf", ".png", full_pdf_url)
@@ -139,6 +142,7 @@ replace_special_words <- function(raw_dat){
   dat <- gsub("robert[[:print:]]{1,2}e?[[:print:]]{1,3}edwards", "edwards", dat)
   
   dat <- gsub("federal[[:print:]]{1,4}bureau[[:print:]]{1,4}investigation", "fbi", dat)
+  dat <- gsub("federal[[:print:]]{1,4}bureau[[:print:]]{1,4}of[[:print:]]{1,4}investigation", "fbi", dat)
   dat <- gsub("centtal[[:print:]]{1,4}intelligence[[:print:]]{1,4}agency", "cia", dat)
   
   ### other misspelled / poorly imported words
