@@ -29,12 +29,13 @@ import_ocr_doc <- function(full_pdf_url, page ){
                              classify_min_slope='0.2', words_default_fixed_limit='0.3')
   #textord_max_noise_size='4') #,tessedit_char_whitelist = "0123456789")  textord_heavy_nr='1'
   ocr_txt <- magick::image_read(bitmap) %>% #"C:/Users/Bonny/Documents/JFK/png/page.png") %>%
-    magick::image_resize("3000") %>%
+    magick::image_resize("2000") %>%
     magick::image_background(color="white", flatten = TRUE) %>%
     magick::image_convert(colorspace = 'gray',  antialias=TRUE) %>% #assume all docs are black&white
     magick::image_modulate(saturation=150  ) %>%
     magick::image_contrast(sharpen = 10) %>%
-    magick::image_convolve(kernel = "LoG:0x2", scaling="300,100%") %>%
+    magick::image_convolve(kernel = "LoG:0x2", scaling="300%,100%") %>%
+  #  magick::image_convolve(kernel = "Diamond", scaling="80%!") %>%
     magick::image_trim() 
   
   test_png <- gsub(".pdf", ".png", full_pdf_url)
