@@ -6,6 +6,7 @@ library(dplyr)
 library(tidyr)
 library(tm)
 library(SnowballC)
+library(wordcloud)
 
 if(! require(magick)){
   library(devtools)
@@ -148,6 +149,8 @@ print(paste("All documents imported and saved to file ",doc_raw_file) )
 ##############################
 
 stop("Terminating process after STAGE 1")
+
+
 doc_raw_txt <- readRDS(doc_raw_file)
 
 ###################################
@@ -156,9 +159,10 @@ doc_raw_txt <- readRDS(doc_raw_file)
 print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
 for(id in dplyr::filter(doc_raw_txt, !is.na(Raw.Body.Text))$Doc.Index){
-  raw_body_text <- (doc_raw_txt[id, ])$Raw.Body.Text
+  raw_body_text <- tolower( (doc_raw_txt[id, ])$Raw.Body.Text )
   doc <- remove_non_ascii(raw_body_text)
   doc <- remove_nonwords(doc)
+  doc <- replace_special_words( doc )
   doc_raw_txt[id, 'Body.Text'] <- doc
 }
 doc_txt_file <- paste0(work_dir,"/doc_text.rds")
@@ -168,11 +172,11 @@ saveRDS(doc_raw_txt, file = doc_txt_file)
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
 ### to get rid of unwanted/unnecessary features 
 print("Creating a corpus from data.frame")
-doc_raw_txt <- dplyr::inner_join( x=doc_list %>% dplyr::select(Doc.Index, Title, Doc.Date, Doc.Type, Record.Series, Originator) , 
-                           y=doc_raw_txt %>% dplyr::filter(!is.na(Body.Text)) %>% dplyr::select(Doc.Index, Body.Text) ,
-                           by = 'Doc.Index') %>% mutate(Doc.Date= format(Doc.Date,"%Y-%m-%d"))
-m <- list(content = 'Body.Text', heading='Title', date='Doc.Date', id='Doc.Index', origin='Originator' , series='Record.Series', type='Doc.Type')
-df_doc_reader <- tm::readTabular(mapping = m)
+doc_raw_txt <- dplyr::inner_join( x = doc_list %>% dplyr::select(Doc.Index, Title, Doc.Date, Doc.Type, Record.Series, Originator) , 
+                                  y = doc_raw_txt %>% dplyr::filter(!is.na(Body.Text)) %>% dplyr::select(Doc.Index, Body.Text) ,
+                                  by= 'Doc.Index') %>% dplyr::mutate(Doc.Date= format(Doc.Date,"%Y-%m-%d"))
+corpus_map <- list(content = 'Body.Text', heading='Title', date='Doc.Date', id='Doc.Index', origin='Originator' , series='Record.Series', type='Doc.Type')
+df_doc_reader <- tm::readTabular(mapping = corpus_map)
 
 doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerControl = list(reader = df_doc_reader))
 
@@ -199,12 +203,12 @@ doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerCon
 doc_corpus <- clean_corpus(doc_corpus, stemming=FALSE, 
                            excl_words=c('page', 'docid', 'made','stated', 'case', 'general',
                                         'plans','will','report','memorandum', 'date', 'time',
-                                        'state','library')
+                                        'state','library', 'may', 'two')
                            )
 
 
 #This tells R to treat your preprocessed documents as text documents.
-doc_corpus <- tm_map(doc_corpus, PlainTextDocument)
+doc_corpus <- tm::tm_map(doc_corpus, tm::PlainTextDocument)
 
 # if you want you can print the text in the corpus
 writeLines(as.character(doc_corpus[19]))
@@ -213,17 +217,28 @@ writeLines(as.character(doc_corpus[19]))
 #################################
 #### STAGE 3: analysis
 
-dtm <- TermDocumentMatrix(doc_corpus)
-m <- as.matrix(dtm)
-v <- sort(rowSums(m),decreasing=TRUE)
-d <- data.frame(word = names(v),freq=v)
-head(d, 20)
+#dtm ia matrix with as many rows as distinct words (terms) and as many cols as documents in the corpus
+dtm <- tm::TermDocumentMatrix(doc_corpus)
+m <- as.matrix(dtm) 
 
-if(! check_corpus_non_empty(sel_corpus) ){ #check_corpus_non_empty defined in JFK_functions.py
-  warning("Warning! the selected subset of the corpus is empty!")
-}
+#reorder matrix rows by fre
+wrdc <- sort(rowSums(m),decreasing=TRUE) 
+d <- data.frame(word = names(wrdc),word_count=wrdc)
+#head(d, 40) # most frequent words
+tail(d, 20) #least frequent words
+
+### create a word cloud chart out of the 50 most frequent terms 
+set.seed(13522)
+png(paste0(work_dir,"/JFK_wordcloud_top50.png"),840,680,"px")
+wordcloud(words = d$word, freq = d$word_count, min.freq = 30,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+dev.off()
 
 
+
+findAssocs(dtm, terms = c("sac", "san"), corlimit = c(0.4,0.5))
+m['sac',]
 #saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
 
 ### here you run the proper ML analysis
