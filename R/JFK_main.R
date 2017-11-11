@@ -14,6 +14,7 @@ if(! require(magick)){
   devtools::install_github("ropensci/magick")
 }
 
+#import helper functions
 
 ################# USER INPUTS AND SETTINGS ########################
 curr_dor <- getwd()
@@ -28,21 +29,25 @@ tryCatch({
 }# end error
 )# end tryCatch
 
+source(paste0(work_dir,"/R/JFK_functions.R"))
+
 tmp_dir  <- paste0(work_dir,"/tmp/")
 if(!dir.exists(tmp_dir)){
   dir.create(tmp_dir,recursive = TRUE, showWarnings = FALSE)
 }
 
-#import helper functions
-source(paste0(work_dir,"/R/JFK_functions.R"))
+log_file_stage1 <- paste0(work_dir,"/log_JFK_STAGE1_", format(Sys.time(), "%Y-%m-%d_%H-%M"), ".txt")
 
 base_url <- "https://www.archives.gov/files/research/jfk/releases/"  # HTTP URL where all pdfs are accessible
 # range of docs to process
 min_id <- 1 # set to 0 for startign since first doc in list
-max_id <- 500 # set to Inf to process till the end of doc list
+max_id <- 400 # set to Inf to process till the end of doc list
 
 
 ###################################################################
+
+
+sink(log_file_stage1)
 
 # xlsx does not work really great, IMHO; example: stringAsFactors not working
 #doc_list <- xlsx::read.xlsx2("C:/Users/Bonny/Documents/JFK/jfkrelease-2017-dce65d0ec70a54d5744de17d280f3ad2-nolinks.xlsx",
@@ -149,7 +154,12 @@ print(paste("Finished to loop over documents at ",Sys.time()))
 print(paste("All documents imported and saved to file ",doc_raw_file) )
 ##############################
 
+
+
+sink()
 stop("Terminating process after STAGE 1")
+
+
 
 
 doc_raw_txt <- readRDS(doc_raw_file)
