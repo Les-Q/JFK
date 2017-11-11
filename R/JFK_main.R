@@ -4,6 +4,7 @@ library(magrittr)
 #library(xlsx)
 library(dplyr)
 library(tidyr)
+library(reshape2)
 library(tm)
 library(SnowballC)
 library(wordcloud)
@@ -15,7 +16,7 @@ if(! require(magick)){
 
 
 ################# USER INPUTS AND SETTINGS ########################
-
+curr_dor <- getwd()
 # get directory of this script and move up by one dir; works only if you are sourcing the script
 tryCatch({
   work_dir <- strsplit(dirname(sys.frame(1)$ofile),split='/')[[1]] 
@@ -164,6 +165,7 @@ for(id in dplyr::filter(doc_raw_txt, !is.na(Raw.Body.Text))$Doc.Index){
   doc <- remove_nonwords(doc)
   doc <- replace_special_words( doc )
   doc_raw_txt[id, 'Body.Text'] <- doc
+
 }
 doc_txt_file <- paste0(work_dir,"/doc_text.rds")
 saveRDS(doc_raw_txt, file = doc_txt_file)
@@ -220,6 +222,7 @@ writeLines(as.character(doc_corpus[19]))
 #dtm ia matrix with as many rows as distinct words (terms) and as many cols as documents in the corpus
 dtm <- tm::TermDocumentMatrix(doc_corpus)
 m <- as.matrix(dtm) 
+colnames(m) <- doc_raw_txt$Doc.Index
 
 #reorder matrix rows by fre
 wrdc <- sort(rowSums(m),decreasing=TRUE) 
