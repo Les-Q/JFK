@@ -24,11 +24,26 @@ import_ocr_doc <- function(full_pdf_url, page ){
   
   # cleaning the bitmap with magick gives typically better results; 
   # magick::image_ocr is based on tesseract::ocr
+  tesseract_options = list(  gapmap_no_isolated_quanta='1', segment_debug='1',
+                             textord_words_default_nonspace='0.5',
+                             classify_min_slope='0.2', words_default_fixed_limit='0.3')
+  #textord_max_noise_size='4') #,tessedit_char_whitelist = "0123456789")  textord_heavy_nr='1'
   ocr_txt <- magick::image_read(bitmap) %>% #"C:/Users/Bonny/Documents/JFK/png/page.png") %>%
     magick::image_resize("2000") %>%
-    magick::image_convert(colorspace = 'gray') %>% #assume all docs are black&white
-    magick::image_trim() %>%
-    magick::image_ocr() 
+    magick::image_background(color="white", flatten = TRUE) %>%
+    magick::image_convert(colorspace = 'gray',  antialias=TRUE) %>% #assume all docs are black&white
+    magick::image_modulate(saturation=150  ) %>%
+    magick::image_contrast(sharpen = 10) %>%
+    magick::image_convolve(kernel = "LoG:0x2", scaling="300,100%") %>%
+    magick::image_trim() 
+  
+  test_png <- gsub(".pdf", ".png", full_pdf_url)
+  print(paste("savign to ", test_png))
+  png(test_png)
+  print( ocr_txt )
+  dev.off()
+  ocr_txt <- ocr_txt %>%
+             magick::image_ocr(options=tesseract_options) 
   
   return(ocr_txt)
 }# end import_ocr_doc
@@ -129,13 +144,13 @@ replace_special_words <- function(raw_dat){
   dat <- gsub("cancerning", "concerning", dat)
   dat <- gsub("joee", "joe", dat)
   dat <- gsub("dallasfile","dallas file",dat)
+  dat <- gsub("dallasv","dallas",dat)
   dat <- gsub("francsco","francisco",dat)
   dat <- gsub("victimcivil","victim civil",dat)
   dat <- gsub("withthe", "with the", dat)
   dat <- gsub("leeoswald", "oswald", dat)
   dat <- gsub("naziparty", "nazi party", dat)
-  
-  
+
   return(dat)
   
 }# end replace_special_words
