@@ -39,7 +39,7 @@ source(paste0(work_dir,"/R/JFK_functions.R"))
 base_url <- "https://www.archives.gov/files/research/jfk/releases/"  # HTTP URL where all pdfs are accessible
 # range of docs to process
 min_id <- 1 # set to 0 for startign since first doc in list
-max_id <- 100 # set to Inf to process till the end of doc list
+max_id <- 500 # set to Inf to process till the end of doc list
 
 
 ###################################################################
@@ -54,7 +54,7 @@ doc_list <- doc_list %>% mutate(File.Name = tolower(File.Name),
                                 Comments = toupper(Comments),
                                 NARA.Release.Date = as.POSIXct(NARA.Release.Date, format="%m/%d/%Y"),
                                 Doc.Date = as.POSIXct(Doc.Date, format="%m/%d/%Y")) %>%
-  mutate(Doc.Date = as.POSIXct( ifelse(Doc.Date=="0000-01-01",NA, Doc.Date)) ) %>%
+  mutate(Doc.Date = as.POSIXct( ifelse(Doc.Date=="0000-01-01",NA, Doc.Date), origin='1970-01-01') ) %>%
   mutate(Doc.Type = gsub('[[:punct:]]+','',Doc.Type)) %>%
   mutate(Doc.Type = gsub('  +',' ',Doc.Type)) 
 
@@ -124,7 +124,7 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   ### loop through pages, OCR them one-by-one
   raw_body_text <- as.character(NA)
   for(iP in seq(2,n_pages,1) ){
-    print(paste("Page",iP,"of",n_pages))
+    cat(paste("\rPage",iP,"of",n_pages,"             "))
     tmp_txt <- import_ocr_doc(local_pdf, iP) 
     raw_body_text <- paste(raw_body_text,tmp_txt, sep = " ")
   }# end loop on pages of pdf
