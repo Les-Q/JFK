@@ -81,6 +81,7 @@ handwritten_mask <- grepl('HANDWRITTEN', doc_list$Comments) # | grepl('NOTES', d
 #### create tbl_df where to store outputs
 
 doc_raw_txt <- data.frame(Doc.Index=doc_list$Doc.Index,
+                          Imported.Pages = as.integer(NA),
                           First.Page = as.character(NA),
                           Raw.Body.Text = as.character(NA),
                           Body.Text = as.character(NA),
@@ -135,6 +136,7 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   }# end loop on pages of pdf
   
   # save raw imported text to df
+  doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Pages'] <- n_pages
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Page'] <- first_page
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'Raw.Body.Text'] <- raw_body_text
 
@@ -159,8 +161,8 @@ print(paste("All documents imported and saved to file ",doc_raw_file) )
 sink()
 stop("Terminating process after STAGE 1")
 
-
-
+### some special ones, in particular no. 356 has 409 pages
+sel_id <- c(70, 77, 78, 356)
 
 doc_raw_txt <- readRDS(doc_raw_file)
 
