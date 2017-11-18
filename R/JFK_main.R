@@ -98,6 +98,8 @@ doc_raw_file <- paste0(work_dir,"/doc_rawtext_tmp.rds")
 ##########################################
 ####  STAGE 1: import and OCR
 ####  LOOP OVER ALL DOCS
+print(paste("Starting to loop over documents at ",Sys.time()))
+
 for (id in doc_list$Doc.Index[!handwritten_mask]){
   t0 <- Sys.time()
   ### process only docs in the range specified by user
