@@ -1,4 +1,5 @@
 library(pdftools)
+library(ggplot2)
 library(tesseract)
 library(magrittr)
 #library(xlsx)
@@ -72,6 +73,7 @@ unique(doc_list$Doc.Type)
 doc_list$Conv.Flag <- 0
 doc_list$Memo.Flag <- 0
 doc_list$Report.Flag <- 0
+doc_list$Imported.Pages <- as.integer(NA)
 doc_list$Import.Time.Sec <- as.integer(NA) 
 
 #do not process handwritten notes
@@ -81,7 +83,6 @@ handwritten_mask <- grepl('HANDWRITTEN', doc_list$Comments) # | grepl('NOTES', d
 #### create tbl_df where to store outputs
 
 doc_raw_txt <- data.frame(Doc.Index=doc_list$Doc.Index,
-                          Imported.Pages = as.integer(NA),
                           First.Page = as.character(NA),
                           Raw.Body.Text = as.character(NA),
                           Body.Text = as.character(NA),
@@ -136,14 +137,14 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
   }# end loop on pages of pdf
   
   # save raw imported text to df
-  doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Pages'] <- n_pages
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'First.Page'] <- first_page
   doc_raw_txt[doc_raw_txt$Doc.Index==id,'Raw.Body.Text'] <- raw_body_text
 
   ### keep track of processing time
   delta_t <- difftime(Sys.time(), t0, units="secs")
   writeLines(paste0("ID=",id," processed in ",sprintf("%.1f",as.numeric(delta_t))," seconds\n" ))
-  doc_list[id, "Import.Time.Sec"] <- round(delta_t) 
+  doc_list[doc_list$Doc.Index==id, 'Imported.Pages'] <- n_pages
+  doc_list[doc_list$Doc.Index==id, "Import.Time.Sec"] <- round(delta_t) 
   
   ### wrap up and move to next document
   print(paste("Saving outputs to tmp caches in ",work_dir) )
@@ -154,11 +155,21 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
 
 print(paste("Finished to loop over documents at ",Sys.time()))
 print(paste("All documents imported and saved to file ",doc_raw_file) )
+print(paste("Imported a total of ", sum(doc_list$Imported.Pages, na.rm=T)," pages. Average # of pages per document: ", sprintf("%.3f",mean(doc_list$Imported.Pages, na.rm=T))))
 ##############################
 
 
 
 sink()
+
+### a chart for performance monitoring: showing the import time vs the number of pages
+
+p <- ggplot(data = doc_list2) +
+     geom_point(aes(x=Imported.Pages, y=Import.Time.Sec), colour='royalblue', size=2)  +
+     scale_x_continuous(limits = c(0.0,30.0))+ 
+     labs(title="Summary of OCR import performances", x="No. of pages imported", y="Total time [sec]")
+print(p)
+
 stop("Terminating process after STAGE 1")
 
 ### some special ones, in particular no. 356 has 409 pages
