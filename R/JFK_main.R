@@ -164,9 +164,9 @@ sink()
 
 ### a chart for performance monitoring: showing the import time vs the number of pages
 
-p <- ggplot(data = doc_list2) +
+p <- ggplot(data = doc_list) +
      geom_point(aes(x=Imported.Pages, y=Import.Time.Sec), colour='royalblue', size=2)  +
-     scale_x_continuous(limits = c(0.0,30.0))+ 
+     scale_x_continuous(limits = c(0.0,120.0))+ 
      labs(title="Summary of OCR import performances", x="No. of pages imported", y="Total time [sec]")
 print(p)
 
