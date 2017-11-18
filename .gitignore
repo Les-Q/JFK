@@ -5,3 +5,9 @@
 *.ali
 /doc_tmp.pdf
 /tmp/*
+/doc_list_tmp.rds
+/doc_rawtext_2017-11-07.rds
+/doc_rawtext_tmp.rds
+/doc_text.rds
+/JFK_wordcloud_top50.png
+/log_JFK_STAGE1_2017-11-11_23-48.txt
