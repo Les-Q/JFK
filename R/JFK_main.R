@@ -45,9 +45,6 @@ min_id <- 1 # set to 0 for startign since first doc in list
 max_id <- 400 # set to Inf to process till the end of doc list
 
 
-###################################################################
-
-
 sink(log_file_stage1)
 
 # xlsx does not work really great, IMHO; example: stringAsFactors not working
@@ -95,8 +92,8 @@ doc_kw <- data.frame(Doc.Index=doc_list$Doc.Index,
 
 doc_list_file <- paste0(work_dir,"/doc_list_tmp.rds")
 doc_raw_file <- paste0(work_dir,"/doc_rawtext_tmp.rds")
-##########################################
-####  STAGE 1: import and OCR
+####
+####  STAGE 1: import and OCR ####
 ####  LOOP OVER ALL DOCS
 print(paste("Starting to loop over documents at ",Sys.time()))
 
@@ -158,8 +155,7 @@ for (id in doc_list$Doc.Index[!handwritten_mask]){
 print(paste("Finished to loop over documents at ",Sys.time()))
 print(paste("All documents imported and saved to file ",doc_raw_file) )
 print(paste("Imported a total of ", sum(doc_list$Imported.Pages, na.rm=T)," pages. Average # of pages per document: ", sprintf("%.3f",mean(doc_list$Imported.Pages, na.rm=T))))
-##############################
-
+####
 
 
 sink()
@@ -178,9 +174,10 @@ stop("Terminating process after STAGE 1")
 sel_id <- c(70, 77, 78, 356)
 
 doc_raw_txt <- readRDS(doc_raw_file)
-
-###################################
-#### STAGE 2: pre-processing
+doc_raw_txt <- doc_raw_txt %>% dplyr::filter(!is.na(Raw.Body.Text) )
+####
+#### STAGE 2: pre-processing ######
+####
 
 print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
@@ -241,8 +238,9 @@ doc_corpus <- tm::tm_map(doc_corpus, tm::PlainTextDocument)
 writeLines(as.character(doc_corpus[19]))
 
 
-#################################
-#### STAGE 3: analysis
+####
+#### STAGE 3: analysis ####
+####
 
 #dtm ia matrix with as many rows as distinct words (terms) and as many cols as documents in the corpus
 dtm <- tm::TermDocumentMatrix(doc_corpus)
