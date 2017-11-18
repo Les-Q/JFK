@@ -202,7 +202,7 @@ doc_raw_txt <- dplyr::inner_join( x = doc_list %>% dplyr::select(Doc.Index, Titl
 corpus_map <- list(content = 'Body.Text', heading='Title', date='Doc.Date', id='Doc.Index', origin='Originator' , series='Record.Series', type='Doc.Type')
 df_doc_reader <- tm::readTabular(mapping = corpus_map)
 
-doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerControl = list(reader = df_doc_reader))
+doc_corpus_raw <- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerControl = list(reader = df_doc_reader))
 
 ### you can inspect the metadata for a given document in this way
 #meta(doc_corpus[[65]])
@@ -223,12 +223,17 @@ doc_corpus<- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerCon
 #   warning("Warning! the selected subset of the corpus is empty!")
 # }
 
+
+### be aware that some pre-defined words are removed automatically inside the clean_corpus functions,
+### regardless of what you list in here
+excluded_words <- c('page', 'docid', 'made','stated', 'case', 'general',
+                    'plans','will','report','memorandum', 'date', 'time',
+                    'state','library', 'may', 'two', 'yes', 'called','none',
+                    'taken', 'name','individual', 'group', 'subject', 'office', 'know')
+
 # clean up the corpus. Function clear_corpus in helper file JFK_functions.R
-doc_corpus <- clean_corpus(doc_corpus, stemming=FALSE, 
-                           excl_words=c('page', 'docid', 'made','stated', 'case', 'general',
-                                        'plans','will','report','memorandum', 'date', 'time',
-                                        'state','library', 'may', 'two')
-                           )
+doc_corpus <- clean_corpus(doc_corpus_raw, stemming=FALSE, 
+                           excl_words= excluded_words  )
 
 
 #This tells R to treat your preprocessed documents as text documents.
@@ -250,8 +255,8 @@ colnames(m) <- doc_raw_txt$Doc.Index
 #reorder matrix rows by fre
 wrdc <- sort(rowSums(m),decreasing=TRUE) 
 d <- data.frame(word = names(wrdc),word_count=wrdc)
-#head(d, 40) # most frequent words
-tail(d, 20) #least frequent words
+head(d, 40) # most frequent words
+#tail(d, 20) #least frequent words
 
 ### create a word cloud chart out of the 50 most frequent terms 
 set.seed(13522)
