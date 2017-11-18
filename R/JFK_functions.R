@@ -91,9 +91,21 @@ remove_nonwords <- function(raw_dat){
   dat_ind3 <- grep(pattern="^[^aeiouAEIOU]{5,}[[:alnum:]]*", x=dat)
   dat_ind4 <- grep(pattern="^[[:alnum:]]*[^aeiouAEIOU]{5,}$", x=dat)
   
+  # other weird letter patterns that are most likely incompatible with any meaningful
+  # English word or name
+  forbidden_patterns <- c("g[bcfvx]","z[cfgsvx]","t[bdvx]" )
+  for (fp in forbidden_patterns){
+    tmp_ind5 <- grep(pattern = paste0(fp,"+"), x=dat) 
+    if(fp==forbidden_patterns[1]){
+      dat_ind5 <- tmp_ind5
+    }else{
+      dat_ind5 <- c(dat_ind5, tmp_ind5)
+    }
+  }# end for loop
+
   
   # remove elements matching the previous indexes
-  ind_remove <- sort( unique( c(dat_ind1, dat_ind2, dat_ind3, dat_ind4) ) )
+  ind_remove <- sort( unique( c(dat_ind1, dat_ind2, dat_ind3, dat_ind4, dat_ind5) ) )
   dat <- dat[-ind_remove]  
   # convert vector back to a string, ready to be converted to a TM corpus
   dat <- paste(dat, collapse = " ")
