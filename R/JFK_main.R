@@ -173,36 +173,35 @@ stop("Terminating process after STAGE 1")
 ### some special ones, in particular no. 356 has 409 pages
 sel_id <- c(70, 77, 78, 356)
 
-doc_raw_txt <- readRDS(doc_raw_file)
-doc_raw_txt <- doc_raw_txt %>% dplyr::filter(!is.na(Raw.Body.Text) )
+doc_df <- readRDS(doc_raw_file)
+doc_df <- doc_df %>% dplyr::filter(!is.na(Raw.Body.Text) )
 ####
 #### STAGE 2: pre-processing ######
 ####
 
 print("Pre-processing text")
 ### loop on raw body text and for each one clean up text 
-for(id in dplyr::filter(doc_raw_txt, !is.na(Raw.Body.Text))$Doc.Index){
-  raw_body_text <- tolower( (doc_raw_txt[id, ])$Raw.Body.Text )
+for(id in dplyr::filter(doc_df, !is.na(Raw.Body.Text))$Doc.Index){
+  raw_body_text <- tolower( (doc_df[id, ])$Raw.Body.Text )
   doc <- remove_non_ascii(raw_body_text)
   doc <- remove_nonwords(doc)
   doc <- replace_special_words( doc )
-  doc_raw_txt[id, 'Body.Text'] <- doc
-
+  doc_df[id, 'Body.Text'] <- doc
 }
 doc_txt_file <- paste0(work_dir,"/doc_text.rds")
-saveRDS(doc_raw_txt, file = doc_txt_file)
+saveRDS(doc_df, file = doc_txt_file)
 
 
 ### create a TM corpus from the pre-cleaned texts and then apply further processing 
 ### to get rid of unwanted/unnecessary features 
 print("Creating a corpus from data.frame")
-doc_raw_txt <- dplyr::inner_join( x = doc_list %>% dplyr::select(Doc.Index, Title, Doc.Date, Doc.Type, Record.Series, Originator) , 
-                                  y = doc_raw_txt %>% dplyr::filter(!is.na(Body.Text)) %>% dplyr::select(Doc.Index, Body.Text) ,
+doc_df <- dplyr::inner_join( x = doc_list %>% dplyr::select(Doc.Index, Title, Doc.Date, Doc.Type, Record.Series, Originator) , 
+                                  y = doc_df %>% dplyr::filter(!is.na(Body.Text)) %>% dplyr::select(Doc.Index, Body.Text) ,
                                   by= 'Doc.Index') %>% dplyr::mutate(Doc.Date= format(Doc.Date,"%Y-%m-%d"))
 corpus_map <- list(content = 'Body.Text', heading='Title', date='Doc.Date', id='Doc.Index', origin='Originator' , series='Record.Series', type='Doc.Type')
 df_doc_reader <- tm::readTabular(mapping = corpus_map)
 
-doc_corpus_raw <- tm::VCorpus(DataframeSource(as.data.frame(doc_raw_txt) ), readerControl = list(reader = df_doc_reader))
+doc_corpus_raw <- tm::VCorpus(DataframeSource(as.data.frame(doc_df) ), readerControl = list(reader = df_doc_reader))
 
 ### you can inspect the metadata for a given document in this way
 #meta(doc_corpus[[65]])
@@ -247,16 +246,22 @@ writeLines(as.character(doc_corpus[19]))
 #### STAGE 3: analysis ####
 ####
 
-#dtm ia matrix with as many rows as distinct words (terms) and as many cols as documents in the corpus
-dtm <- tm::TermDocumentMatrix(doc_corpus)
-m <- as.matrix(dtm) 
-colnames(m) <- doc_raw_txt$Doc.Index
+#tdm ia matrix with as many rows as distinct words (terms) and as many cols as documents in the corpus
+tdm <- tm::TermDocumentMatrix(doc_corpus)
+m <- as.matrix(tdm) 
+colnames(m) <- doc_df$Doc.Index
 
-#reorder matrix rows by fre
+#reorder matrix rows by frequency
 wrdc <- sort(rowSums(m),decreasing=TRUE) 
 d <- data.frame(word = names(wrdc),word_count=wrdc)
 head(d, 40) # most frequent words
 #tail(d, 20) #least frequent words
+
+# count the non-zero cols for each row -> number of docs in which a word is present
+wrdc <- sort(rowSums(m),decreasing=TRUE) 
+d <- data.frame(word = names(wrdc),word_count=wrdc)
+head(d, 20) # most frequent words
+
 
 ### create a word cloud chart out of the 50 most frequent terms 
 set.seed(13522)
@@ -268,14 +273,50 @@ dev.off()
 
 
 
-findAssocs(dtm, terms = c("sac", "san"), corlimit = c(0.4,0.5))
-m['sac',]
+findAssocs(tdm, terms = c("sac", "espjhinosa"), corlimit = c(0.4,0.5))
+m['espinosa',]
 #saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
+
+
+### remove sparse terms from the tdm 
+tdm_nosparse <- removeSparseTerms(tdm, 0.98)
+m_nosparse <- as.matrix(tdm_nosparse) 
+colnames(m_nosparse) <- doc_df$Doc.Index
+wrdc_nosparse <- sort(rowSums(m_nosparse),decreasing=TRUE) 
+d_nosparse <- data.frame(word = names(wrdc_nosparse),word_count=wrdc_nosparse)
+head(d_nosparse, 20) # most frequent words
+set.seed(13522)
+png(paste0(work_dir,"/JFK_wordcloud_top50_nonsparse.png"),840,680,"px")
+wordcloud(words = d_nosparse$word, freq = d_nosparse$word_count, min.freq = 30,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+dev.off()
+
+
+### do it again with a TF-IDF: weight term frequency by the inverse of document frequency
+### (i.e., the inverse of in how many documents that same term appears)
+
+tdm2 <- tm::TermDocumentMatrix(doc_corpus, control=list(weighting= function(x){tm::weightTfIdf(x,normalize=TRUE)} ))
+tdm2 <- removeSparseTerms(tdm2, 0.98)
+m2 <- as.matrix(tdm2) 
+colnames(m2) <- doc_df$Doc.Index
+wrdc2 <- sort(rowSums(m2),decreasing=TRUE) 
+d2 <- data.frame(word = names(wrdc2),word_count=wrdc2)
+head(d2, 20) # most frequent words
+set.seed(13522)
+png(paste0(work_dir,"/JFK_wordcloud_top50_TFIDF.png"),840,680,"px")
+wordcloud(words = d2$word, freq = d2$word_count, min.freq = 30,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+dev.off()
+
+
+
 
 ### here you run the proper ML analysis
 
 
 
 
-
+doc_list%>%filter(Doc.Index==360)%>%print(width=Inf)
 
