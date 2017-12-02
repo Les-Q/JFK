@@ -228,6 +228,8 @@ clean_corpus <- function( raw_corpus , stemming=FALSE, excl_words=NA){
   
   # this is going to merge two words that we want to consider as one
   corpus <- tm_map(corpus, content_transformer(gsub), pattern = "new orleans", replacement = "new_orleans")
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "new york", replacement = "new_york")
+  corpus <- tm_map(corpus, content_transformer(gsub), pattern = "los angeles", replacement = "los_angeles")
   corpus <- tm_map(corpus, content_transformer(gsub), pattern = "san francisco", replacement = "san_francisco")
   corpus <- tm_map(corpus, content_transformer(gsub), pattern = "san antonio", replacement = "san_antonio")
   corpus <- tm_map(corpus, content_transformer(gsub), pattern = "attorney general", replacement = "attorney_general")

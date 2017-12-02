@@ -238,8 +238,8 @@ doc_corpus <- clean_corpus(doc_corpus_raw, stemming=FALSE,
 #This tells R to treat your preprocessed documents as text documents.
 doc_corpus <- tm::tm_map(doc_corpus, tm::PlainTextDocument)
 
-# if you want you can print the text in the corpus
-writeLines(as.character(doc_corpus[19]))
+# if you want you can print the text of the n-th document in the corpus
+# writeLines(as.character(doc_corpus[19]))
 
 
 ####
@@ -310,6 +310,7 @@ wordcloud(words = d2$word, freq = d2$word_count, min.freq = 30,
           colors=brewer.pal(8, "Dark2"))
 dev.off()
 
+findAssocs(tdm2, terms = c("sac", "pci"), corlimit = c(0.4,0.4))
 
 
 
