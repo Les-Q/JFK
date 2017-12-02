@@ -254,7 +254,7 @@ colnames(m) <- doc_df$Doc.Index
 #reorder matrix rows by frequency
 wrdc <- sort(rowSums(m),decreasing=TRUE) 
 d <- data.frame(word = names(wrdc),word_count=wrdc)
-head(d, 40) # most frequent words
+head(d, 20) # most frequent words
 #tail(d, 20) #least frequent words
 
 # count the non-zero cols for each row -> number of docs in which a word is present
@@ -293,14 +293,24 @@ wordcloud(words = d_nosparse$word, freq = d_nosparse$word_count, min.freq = 30,
 dev.off()
 
 
-### do it again with a TF-IDF: weight term frequency by the inverse of document frequency
-### (i.e., the inverse of in how many documents that same term appears)
-
+### do it again with a TF-IDF: the frequency of each distinct term is weighted by the inverse of document frequency
+### (i.e., the log of the ratio btw the total number of documents and the number of documents containing that term)
+###
+### This emphasizes terms that appear frequently in only one or few documents, the idea being that these terms
+### summarize better the entrie corpus. Because of this, I removed the cleaning of sparse terms, it does not
+### make sense to run a TF-IDF and then remove sparse terms.
+###
+### However, I don't think this is the right approach in this case, for two reason:
+###  -) we have gazillions of spurious words, as well interview trasncripts where the name of the 
+###     of the witness is repeated gazillions of times
+###  -) the aim of the analysis is not to look for the words that summarize the cirpus doc by doc,
+###     rather to find connection and ideas across the entire corpus. If a term is central to the
+###     entire corpus, TF-IDF will suppress it.
 tdm2 <- tm::TermDocumentMatrix(doc_corpus, control=list(weighting= function(x){tm::weightTfIdf(x,normalize=TRUE)} ))
-tdm2 <- removeSparseTerms(tdm2, 0.98)
 m2 <- as.matrix(tdm2) 
 colnames(m2) <- doc_df$Doc.Index
 wrdc2 <- sort(rowSums(m2),decreasing=TRUE) 
+print(wrdc2[1:5])
 d2 <- data.frame(word = names(wrdc2),word_count=wrdc2)
 head(d2, 20) # most frequent words
 set.seed(13522)
@@ -311,7 +321,7 @@ wordcloud(words = d2$word, freq = d2$word_count, min.freq = 30,
 dev.off()
 
 findAssocs(tdm2, terms = c("sac", "pci"), corlimit = c(0.4,0.4))
-
+m2['espinosa', which(m2['espinosa',]>0.0)]
 
 
 ### here you run the proper ML analysis
