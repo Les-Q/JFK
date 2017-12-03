@@ -381,9 +381,9 @@ get_word_links <- function(all_words, position, window, min_links=2) {
   ###
   
   stopifnot(min_links>0)
-  start_window <- ifelse(position-window < 1,1,position - window)
+  start_window <- ifelse(position-window < 1, 1, position - window)
   end_window <- ifelse(position+window>length(all_terms),length(all_terms),position + window)
-  links <- all_words[start_window, end_window]
+  links <- all_words[c(start_window:end_window)]
   
   ### not yet implemented: keep only certain types of words
   ### links <- filter_edge_words(links, my_filters)
@@ -406,11 +406,12 @@ create_text_graph <- function(all_words, search_window,
   ### (i.e. two words get linked if they are not separated by more than 'search_window' words)
   
   require(igraph)
-  print(paste("Creating a Text Graph from an initial list of ",n_terms,
-              " words, proximity search window size: ",search_window))
   word_graph <- igraph::graph.empty(0, directed=FALSE)
   i <- 1
-  n_terms <- length(all_terms)
+  iproc <- 1
+  n_terms <- length(all_words)
+  print(paste("Creating a Text Graph from an initial list of ",n_terms,
+              " words, proximity search window size: ",search_window))
   
   process_all_words <- TRUE
   if(!is.null(key_words)){
@@ -422,26 +423,30 @@ create_text_graph <- function(all_words, search_window,
     }
   }
   
+  t_old <- Sys.time()
   ### we loop over all the words in the list 
   while (i < n_terms ) {
-    
-    ### if the user provided a whitelist of key words, skip this word
+         ### if the user provided a whitelist of key words, skip this word
     ### unless it is in the whitelist
     if(!process_all_words){
       if( ! all_words[i] %in% key_words){
+        i <- i+1
         next
       }  
     }
-    
-    if (i%%1000==1){
+
+    iproc <- iproc+1
+    if (iproc%%1000==1){
       print(paste("Creating vertexes and edges for word ",i," / ",n_terms))
     }
     ### First we collect the link words, with the definition of
     ### 'link' as a word within a window around the word under scrutiny.
     ### The width of the search window is defined by the user.
-    links <- get_word_links(i,search_window)                                
+    links <- get_word_links(all_words, i,search_window) 
+
     if (links[1] != "") {                                     
-      #cat(i," ",all_words[i]," - ",paste(c(links),collapse=" "),"\n")
+      ### very verbose print out
+      ###cat(i," ",all_words[i]," - ",paste(c(links),collapse=" "),"\n")
       
       ### If it is the first time we encounter the word under scrutiny, we add it
       ### to the list of vertices of the graph.
@@ -463,21 +468,29 @@ create_text_graph <- function(all_words, search_window,
         }
         if ( length(which(V(word_graph)$name==links[j]))==0 ) { #linked word is brand new
           word_graph <- word_graph + igraph::vertices(links[j])
-          word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=edge_weight)
+          word_graph <- word_graph + igraph::edges(c(all_words[i],links[j]),weight=edge_weight)
         }else {
           if ( igraph::are.connected(word_graph, all_words[i], links[j])) { #already present edge
             my_edge <- E(word_graph, c(all_words[i], links[j]) )
-            prev_edge_weight <- as.numeric(edgeData(word_graph,words[i],links[j],"weight"))
-            word_graph <- set_edge_attr(word_graph,name = 'weight',
+            prev_edge_weight <- as.numeric(edge_attr(word_graph,"weight", index=my_edge))
+            word_graph <- set_edge_attr(word_graph, name = 'weight',
                                         index = my_edge ,value= prev_edge_weight+edge_weight)
             
           } else {#linked word is a new edge for this vertex
-            word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=edge_weight)
+            word_graph <- word_graph + igraph::edges(c(all_words[i],links[j]),weight=edge_weight)
           }
         } 
       }# end for loop over j (links)
-    }
+    }# end if links is not empty
     i <- i+1
+    
+    if(iproc%%1000==1){
+      t_new <- Sys.time()
+     print(sprintf("Processed 1000 words in %.1f seconds", i,
+                     as.numeric(difftime(t_new, t_old,units = "secs")) ))
+      t_old <- t_new
+   }
+    
   }#end while loop over i (words)
   return( word_graph )
 }#end create_text_graph
