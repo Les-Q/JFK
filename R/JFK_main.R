@@ -9,6 +9,9 @@ library(reshape2)
 library(tm)
 library(SnowballC)
 library(wordcloud)
+library(NLP)
+library(textrank)
+
 
 if(! require(magick)){
   library(devtools)
@@ -273,8 +276,7 @@ dev.off()
 
 
 
-findAssocs(tdm, terms = c("sac", "espjhinosa"), corlimit = c(0.4,0.5))
-m['espinosa',]
+#findAssocs(tdm, terms = c("sac", "espjhinosa"), corlimit = c(0.4,0.5))
 #saveRDS(doc_kw, file = paste0(work_dir,"/doc_keywords.rds"))
 
 
@@ -320,13 +322,31 @@ wordcloud(words = d2$word, freq = d2$word_count, min.freq = 30,
           colors=brewer.pal(8, "Dark2"))
 dev.off()
 
-findAssocs(tdm2, terms = c("sac", "pci"), corlimit = c(0.4,0.4))
-m2['espinosa', which(m2['espinosa',]>0.0)]
+#findAssocs(tdm2, terms = c("sac", "pci"), corlimit = c(0.4,0.4))
+#m2['espinosa', which(m2['espinosa',]>0.0)]
 
 
 ### here you run the proper ML analysis
 
 
+### Approach #1: text graph
+### starting example: https://rpubs.com/ivan_berlocher/79860
+
+
+### start from raw vector of terms. reimport it from the doc_corpus
+### in order to use the cleaning done in the Corpus creation
+all_terms <- unname( unlist( lapply( lapply(doc_corpus, as.character) , FUN=strsplit, split=" " )) )
+all_sentences <-  unname( unlist(lapply(doc_corpus, as.character)) )
+
+
+### run NLP over the corpus in order to tag terms by synctatic role (noun, adjective, verb, etc.)
+### compared to the example linked above, we will treat each document as it was a unique sentence.
+tagPOS(all_sentences, POS_whitelist = c('NN', 'JJ'))
+
+### nota: puoi fare un super graph con mille mila vertici e ancora di piu' bordi
+### pero' forse sarebbe meglio un graph avente le connessioni solo per un gruppo
+### interessante di parole, tipo le top 50 trovate precedentemente. 
+create_text_graph(all_terms)
 
 
 doc_list%>%filter(Doc.Index==360)%>%print(width=Inf)

@@ -36,7 +36,7 @@ import_ocr_doc <- function(full_pdf_url, page ){
     magick::image_resize("2000") %>%
     magick::image_background(color="white", flatten = TRUE) %>%
     magick::image_convert(colorspace = 'gray',  antialias=TRUE) %>% #assume all docs are black&white
-   # magick::image_despeckle(., times = 4) %>% # not very effective
+    # magick::image_despeckle(., times = 4) %>% # not very effective
     magick::image_modulate(saturation=200 , brightness = 80 ) %>%
     magick::image_contrast(sharpen = 10) %>%
     magick::image_convolve(kernel = "LoG:0x2", scaling="300%,100%") %>%
@@ -45,9 +45,9 @@ import_ocr_doc <- function(full_pdf_url, page ){
     magick::image_trim() 
   
   #print(ocr_txt)
-   
+  
   ocr_txt <- ocr_txt %>%
-             magick::image_ocr(options=tesseract_options) 
+    magick::image_ocr(options=tesseract_options) 
   
   return(ocr_txt)
 }# end import_ocr_doc
@@ -102,7 +102,7 @@ remove_nonwords <- function(raw_dat){
       dat_ind5 <- c(dat_ind5, tmp_ind5)
     }
   }# end for loop
-
+  
   
   # remove elements matching the previous indexes
   ind_remove <- sort( unique( c(dat_ind1, dat_ind2, dat_ind3, dat_ind4, dat_ind5) ) )
@@ -167,7 +167,7 @@ replace_special_words <- function(raw_dat){
   dat <- gsub("withthe", "with the", dat)
   dat <- gsub("leeoswald", "oswald", dat)
   dat <- gsub("naziparty", "nazi party", dat)
-
+  
   return(dat)
   
 }# end replace_special_words
@@ -270,5 +270,148 @@ check_corpus_non_empty <- function(c){
   
   return(non_empty)  
 }### end check_corpus_nonempty
+
+##### MACHINE LEARNING SPECIFIC FUNCTIONS ######
+
+
+
+
+tag_POS <-  function( untagged_sentences, POS_whitelist=NULL) {
+  
+  ### takes as input a character vector, each element is a whole untokenized sentence.
+  ### Converts it to a NLP::String
+  ### Runs openNLP functions to annotate each term 
+  ### and add a POS tag (noun, adjective, verb...).
+  ###
+  ### 
+  
+  require(NLP)
+  require(openNLP)
+  
+  n_sentences <- length(untagged_sentences)
+  # add 3 because when we paste and collapse, we add the three characters "|. "
+  nchar_sentences <- cumsum( nchar(untagged_sentences) ) +3
+  start_sentences <- c(1, nchar_sentences[-n_sentences])
+  end_sentences <- c( nchar_sentences)
+  all_sentences <-  paste( paste( untagged_sentences ,collapse="|. "), "|. ")
+  
+  s <- NLP::as.String(all_sentences)
+  rm(all_sentences)
+  word_token_annotator <- openNLP::Maxent_Word_Token_Annotator()
+  annotation1 <- NLP::Annotation(1:n_sentences, rep("sentence", n_sentences), start_sentences, end_sentences)
+  annotation1 <- NLP::annotate(s, word_token_annotator, annotation1)
+  annotation2 <- NLP::annotate(s, openNLP::Maxent_POS_Tag_Annotator(), annotation1)
+  annotation2w <- annotation2[annotation2$type == "word"]
+  POStags <- lapply(annotation2w$features, '[[', "POS")
+  
+  s <- s[annotation2w]
+  if (!is.null(POS_whitelist) ){
+    thisPOSindex <- integer()
+    for(iP in POS_whitelist){
+      tmpPOSindex <- grep(iP, POStags)
+      thisPOSindex <- c(thisPOSindex , tmpPOSindex)
+    }
+    s <- s[thisPOSindex]
+    POStags <- POStags[thisPOSindex]
+  }
+  
+  POStagged <- paste(sprintf("%s/%s", s, POStags), collapse = " ")
+  return( list(POStagged = POStagged, POStags = POStags) )
+  
+}### end tagPOS
+
+
+filter_words_POS <- function(all_terms, filter){
+  filtered <- all_terms
+  return( filtered)
+}
+
+
+get_word_links <- function(all_words, position, window, min_links=2) {
+  ### all_words is a tokenized set of word, i.e. a character vector with all the words 
+  ### I want to add in the graph.  
+  ### position is the index in all_terms of the word you are interested to.
+  ### width_window is a symmetric window around position of how many words before/after
+  ### position to consider.
+  ###
+  
+  stopifnot(min_links>0)
+  start_window <- ifelse(position-window < 1,1,position - window)
+  end_window <- ifelse(position+window>length(all_terms),length(all_terms),position + window)
+  links <- all_words[start_window, end_window]
+  
+  ### not yet implemented: keep as edges only certain types of words
+  ### links <- filter_words_POS(links, my_filters)
+  
+  if (length(links)>=min_links) {
+    links[min_links:length(links)]
+  }
+  else {
+    links <- ""
+  }
+  return(links)
+}### end get_word_links
+
+create_text_graph <- function(all_words, search_window) { 
+  
+  ### all_words is a tokenized set of word, i.e. a character vector with all the words 
+  ### I want to add in the graph.  
+  
+  require(igraph)
+  word_graph <- igraph::graph.empty(0, directed=FALSE)
+  i <- 1
+  n_terms <- length(all_terms)
+
+  ### we loop over all the words in the list 
+  while (i < n_terms ) {
+    
+    if (i%%1000==1){
+      print(paste("Creating vertexes and edges for word ",i," / ",n_terms))
+    }
+    ### First we collect the link words, with the definition of
+    ### 'link' as a word within a window around the word under scrutiny.
+    ### The width of the search window is defined by the user.
+    links <- get_word_links(i,search_window)                                
+    if (links[1] != "") {                                     
+      #cat(i," ",words[i]," - ",paste(c(links),collapse=" "),"\n")
+      
+      ### If it is the first time we encounter the word under scrutiny, we add it
+      ### to the list of vertices of the graph.
+      if ( length(which(V(word_graph)$name==all_words[i]))==0  ) {     
+        word_graph <- word_graph + igraph::vertices(all_words[i])
+      }                                               
+      
+      ### for each link word, we:
+      ###    - add the link to the list of vertices, if not already present
+      ###    - if the link word is not in the list of edges departing 
+      ###      from the node of the word under scrutiny, we add it to the 
+      ###      list of edges and assign a weight=1 to that edge
+      ###    - conversely, if the link word is already in the list of edges,
+      ###      increment by 1 the weight for that edge
+      for (j in 1:length(links)) {
+        if ( length(which(V(word_graph)$name==links[j]))==0 ) {
+          word_graph <- word_graph + igraph::vertices(links[j])
+          word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=1)
+        }else {
+          if ( igraph::are.connected(word_graph, all_words[i], links[j])) { 
+            my_edge <- E(word_graph, c(all_words[i], links[j]) )
+            prev_edge_weight <- as.numeric(edgeData(word_graph,words[i],links[j],"weight"))
+            word_graph <- set_edge_attr(word_graph,name = 'weight',
+                                        index = my_edge ,value= prev_edge_weight+1)
+            
+          } else {
+            word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=1)
+          }
+        } 
+      }# end for loop over j (links)
+    }
+    i <- i+1
+  }#end while loop over i (words)
+  return( word_graph )
+}#end create_text_graph
+
+
+
+
 
 
