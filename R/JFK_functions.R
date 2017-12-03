@@ -298,16 +298,25 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
   end_sentences <- c( nchar_sentences)
   all_sentences <-  paste( paste( untagged_sentences ,collapse="|. "), "|. ")
   
+  ### cast the untokenized corpus of sentences to an object of type NLP::String 
   s <- NLP::as.String(all_sentences)
   rm(all_sentences)
+  
+  ### first identify the words inside the sentneces
   word_token_annotator <- openNLP::Maxent_Word_Token_Annotator()
   annotation1 <- NLP::Annotation(1:n_sentences, rep("sentence", n_sentences), start_sentences, end_sentences)
   annotation1 <- NLP::annotate(s, word_token_annotator, annotation1)
+  ### now add a PoS tag to each word
   annotation2 <- NLP::annotate(s, openNLP::Maxent_POS_Tag_Annotator(), annotation1)
   annotation2w <- annotation2[annotation2$type == "word"]
-  POStags <- lapply(annotation2w$features, '[[', "POS")
   
-  s <- s[annotation2w]
+  ### extract the bare POS tags from this diabolic NLP::Annotation object
+  POStags <- sapply(annotation2w$features, '[[', "POS", USE.NAMES = FALSE)
+  
+  
+  s <- s[annotation2w] # ???
+  
+  ### filter out undesired words by PoS tag 
   if (!is.null(POS_whitelist) ){
     thisPOSindex <- integer()
     for(iP in POS_whitelist){
@@ -328,8 +337,11 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
     POStags <- POStags[-thisPOSindex]
   }
   
-    
+  ### add PoS tag to each word in the untokenized corpus  
   POStagged <- paste(sprintf("%s/%s", s, POStags), collapse = " ")
+  
+  ### split back to the original structure with one sentence by vector element
+  POStagged <- unname( unlist(strsplit(x = POStagged, split = "|. ") ) )
   return( list(POStagged = POStagged, POStags = POStags) )
   
 }### end tagPOS
