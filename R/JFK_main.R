@@ -260,12 +260,6 @@ d <- data.frame(word = names(wrdc),word_count=wrdc)
 head(d, 20) # most frequent words
 #tail(d, 20) #least frequent words
 
-# count the non-zero cols for each row -> number of docs in which a word is present
-wrdc <- sort(rowSums(m),decreasing=TRUE) 
-d <- data.frame(word = names(wrdc),word_count=wrdc)
-head(d, 20) # most frequent words
-
-
 ### create a word cloud chart out of the 50 most frequent terms 
 set.seed(13522)
 png(paste0(work_dir,"/JFK_wordcloud_top50.png"),840,680,"px")
@@ -341,13 +335,43 @@ all_sentences <-  unname( unlist(lapply(doc_corpus, as.character)) )
 
 ### run NLP over the corpus in order to tag terms by synctatic role (noun, adjective, verb, etc.)
 ### compared to the example linked above, we will treat each document as it was a unique sentence.
-tagPOS(all_sentences, POS_whitelist = c('NN', 'JJ'))
+print("Associating to every word in the corpus a Part-Of-Speech tag. Please be patient...")
+list_pos_tag <- tag_POS(all_sentences, 
+                        POS_whitelist = c('NN', 'JJ','VB','RB')) #keep only nouns, adjectives, verbs and adverbs
+POS_tagged_docs <- list_pos_tag$POStagged
+POS_tagged_terms <- list_pos_tag$POStags
+rm(list_pos_tag)
+print(paste("POS tagging completed successfully. ", nrow(POS_tagged_terms)," words remaining (after filters on POS tags)") )
+
+#### word cloud again, but this time after inner join with the tagged terms.
+### this will further get rid of crap and noise. Anyway, exactly because 
+### poorly OCR'ed words and other noise is random, the sparse removal will
+### already do most of the job. Likely to bring to very similar if not equal result.
+m_tagged <- m_nosparse[intersect(rownames(m_nosparse), POS_tagged_terms$word), ]
+
+#reorder matrix rows by frequency
+wrdc_tagged <- sort(rowSums(m_tagged),decreasing=TRUE) 
+d_tagged <- data.frame(word = names(wrdc_tagged),word_count=wrdc_tagged)
+head(d_tagged, 20) # most frequent words
+#tail(d, 20) #least frequent words
+
+### create a word cloud chart out of the 50 most frequent terms 
+set.seed(13522)
+png(paste0(work_dir,"/JFK_wordcloud_top50_tagged.png"),840,680,"px")
+wordcloud(words = d_tagged$word, freq = d_tagged$word_count, min.freq = 30,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+dev.off()
+
+
+
 
 ### nota: puoi fare un super graph con mille mila vertici e ancora di piu' bordi
 ### pero' forse sarebbe meglio un graph avente le connessioni solo per un gruppo
 ### interessante di parole, tipo le top 50 trovate precedentemente. 
-create_text_graph(all_terms)
+create_text_graph(all_terms, 10) # 20 bordi per vertice
 
 
 doc_list%>%filter(Doc.Index==360)%>%print(width=Inf)
 
+### Approach #2: key phrase extraction with textrank

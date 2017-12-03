@@ -356,10 +356,11 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
   ### add PoS tag to each word in the untokenized corpus  
   
   tagged_sentences <- words_tags %>% dplyr::group_by(sentence_id) %>%
-                     dplyr::summarise(orig_sentence = rebuild_sentences_with_POS(word,tag) )
+                      dplyr::summarise(orig_sentence = rebuild_sentences_with_POS(word,tag) )
   
   ### split back to the original structure with one sentence by vector element
-  return( list(POStagged = tagged_sentences$orig_sentence, POStags = POStags) )
+  return( list(POStagged = tagged_sentences$orig_sentence, 
+               POStags = select(words_tags, word,tag,sentence_id ) ) )
   
 }### end tagPOS
 
