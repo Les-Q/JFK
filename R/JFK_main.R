@@ -352,8 +352,7 @@ m_tagged <- m_nosparse[intersect(rownames(m_nosparse), POS_tagged_terms$word), ]
 #reorder matrix rows by frequency
 wrdc_tagged <- sort(rowSums(m_tagged),decreasing=TRUE) 
 d_tagged <- data.frame(word = names(wrdc_tagged),word_count=wrdc_tagged)
-head(d_tagged, 20) # most frequent words
-#tail(d, 20) #least frequent words
+#head(d_tagged, 20) # most frequent words
 
 ### create a word cloud chart out of the 50 most frequent terms 
 set.seed(13522)
@@ -368,8 +367,10 @@ dev.off()
 
 ### nota: puoi fare un super graph con mille mila vertici e ancora di piu' bordi
 ### pero' forse sarebbe meglio un graph avente le connessioni solo per un gruppo
-### interessante di parole, tipo le top 50 trovate precedentemente. 
-create_text_graph(all_terms, 10) # 20 bordi per vertice
+### interessante di parole, tipo le top 20 trovate precedentemente. 
+create_text_graph(POS_tagged_terms$word, 
+                  search_window=10, # for each vertex will add 20 edges (search_window*2)
+                  key_words=as.character( head(d_tagged[,1], 20) ), key_words_edge_mod = 5.0) 
 
 
 doc_list%>%filter(Doc.Index==360)%>%print(width=Inf)
