@@ -313,9 +313,10 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
   ### extract the bare POS tags from this diabolic NLP::Annotation object
   POStags <- sapply(annotation2w$features, '[[', "POS", USE.NAMES = FALSE)
   
-  
-  s <- s[annotation2w] # ???
-  
+  # extract tokenized words. Lenght of this char vectoris the same as POStags,
+  # they match 1:1
+  tok_words <- s[annotation2w] 
+  rm(s)
   ### filter out undesired words by PoS tag 
   if (!is.null(POS_whitelist) ){
     thisPOSindex <- integer()
@@ -323,7 +324,7 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
       tmpPOSindex <- grep(iP, POStags)
       thisPOSindex <- c(thisPOSindex , tmpPOSindex)
     }
-    s <- s[thisPOSindex]
+    tok_words <- tok_words[thisPOSindex]
     POStags <- POStags[thisPOSindex]
   }
 
@@ -333,12 +334,12 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
       tmpPOSindex <- grep(iP, POStags)
       thisPOSindex <- c(thisPOSindex , tmpPOSindex)
     }
-    s <- s[-thisPOSindex]
+    tok_words <- tok_words[-thisPOSindex]
     POStags <- POStags[-thisPOSindex]
   }
   
   ### add PoS tag to each word in the untokenized corpus  
-  POStagged <- paste(sprintf("%s/%s", s, POStags), collapse = " ")
+  POStagged <- paste(sprintf("%s/%s", tok_words, POStags), collapse = " ")
   
   ### split back to the original structure with one sentence by vector element
   POStagged <- unname( unlist(strsplit(x = POStagged, split = "|. ") ) )
