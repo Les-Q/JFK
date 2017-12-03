@@ -276,6 +276,14 @@ check_corpus_non_empty <- function(c){
 
 
 
+rebuild_sentences_with_POS <- function(word, tag){
+  ### small helper function that builds a sentence annotated with PoS
+  ### starting from a list of words and PoS tags
+  tagged_word <- paste0(word,"/",tag)
+  return( paste(tagged_word,collapse=" "))
+}
+
+
 tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL) {
   
   ### Performs Part-of-Speech tagging of sentences
@@ -309,14 +317,18 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
   ### now add a PoS tag to each word
   annotation2 <- NLP::annotate(s, openNLP::Maxent_POS_Tag_Annotator(), annotation1)
   annotation2w <- annotation2[annotation2$type == "word"]
-  
+
   ### extract the bare POS tags from this diabolic NLP::Annotation object
   POStags <- sapply(annotation2w$features, '[[', "POS", USE.NAMES = FALSE)
   
-  # extract tokenized words. Lenght of this char vectoris the same as POStags,
-  # they match 1:1
+  ### extract tokenized words. 
+  ### Lenght of this char vectoris the same as POStags, they match 1:1
   tok_words <- s[annotation2w] 
   rm(s)
+  
+  words_tags <- tbl_df( data.frame(word = tok_words, start=annotation2w$start, end=annotation2w$end, tag=POStags, stringsAsFactors = FALSE) )
+  words_tags$sentence_id <- sapply( words_tags$start, function(word_start, sentence_start){ max( which(sentence_start<=word_start))}, start_sentences   )
+  
   ### filter out undesired words by PoS tag 
   if (!is.null(POS_whitelist) ){
     thisPOSindex <- integer()
@@ -326,6 +338,7 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
     }
     tok_words <- tok_words[thisPOSindex]
     POStags <- POStags[thisPOSindex]
+    words_tags <-  words_tags[thisPOSindex,]
   }
 
   if (!is.null(POS_blacklist) ){
@@ -333,17 +346,20 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
     for(iP in POS_blacklist){
       tmpPOSindex <- grep(iP, POStags)
       thisPOSindex <- c(thisPOSindex , tmpPOSindex)
+      words_tags <-  words_tags[-thisPOSindex,]
     }
     tok_words <- tok_words[-thisPOSindex]
     POStags <- POStags[-thisPOSindex]
   }
-  
+
+  ### group by sentence id and rebuild original sentences.  
   ### add PoS tag to each word in the untokenized corpus  
-  POStagged <- paste(sprintf("%s/%s", tok_words, POStags), collapse = " ")
+  
+  tagged_sentences <- words_tags %>% dplyr::group_by(sentence_id) %>%
+                     dplyr::summarise(orig_sentence = rebuild_sentences_with_POS(word,tag) )
   
   ### split back to the original structure with one sentence by vector element
-  POStagged <- unname( unlist(strsplit(x = POStagged, split = "|. ") ) )
-  return( list(POStagged = POStagged, POStags = POStags) )
+  return( list(POStagged = tagged_sentences$orig_sentence, POStags = POStags) )
   
 }### end tagPOS
 
