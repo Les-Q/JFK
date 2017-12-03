@@ -396,7 +396,8 @@ get_word_links <- function(all_words, position, window, min_links=2) {
   return(links)
 }### end get_word_links
 
-create_text_graph <- function(all_words, search_window, key_words=NULL) { 
+create_text_graph <- function(all_words, search_window, 
+                              key_words=NULL, key_words_edge_mod=1.0) { 
   
   ### 'all_words' is a tokenized set of word, i.e. a character vector  
   ### with all the words I want to add in the graph.
@@ -455,18 +456,22 @@ create_text_graph <- function(all_words, search_window, key_words=NULL) {
       ###    - conversely, if the link word is already in the list of edges,
       ###      increment by 1 the weight for that edge
       for (j in 1:length(links)) {
-        if ( length(which(V(word_graph)$name==links[j]))==0 ) {
+        edge_weight <- 1
+        if(!process_all_words & (links[j]%in% key_words) ){
+          edge_weight <- edge_weight * key_words_edge_mod
+        }
+        if ( length(which(V(word_graph)$name==links[j]))==0 ) { #linked word is brand new
           word_graph <- word_graph + igraph::vertices(links[j])
-          word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=1)
+          word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=edge_weight)
         }else {
-          if ( igraph::are.connected(word_graph, all_words[i], links[j])) { 
+          if ( igraph::are.connected(word_graph, all_words[i], links[j])) { #already present edge
             my_edge <- E(word_graph, c(all_words[i], links[j]) )
             prev_edge_weight <- as.numeric(edgeData(word_graph,words[i],links[j],"weight"))
             word_graph <- set_edge_attr(word_graph,name = 'weight',
-                                        index = my_edge ,value= prev_edge_weight+1)
+                                        index = my_edge ,value= prev_edge_weight+edge_weight)
             
-          } else {
-            word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=1)
+          } else {#linked word is a new edge for this vertex
+            word_graph <- word_graph + igraph::edges(c(words[i],links[j]),weight=edge_weight)
           }
         } 
       }# end for loop over j (links)
