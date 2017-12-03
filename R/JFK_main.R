@@ -11,7 +11,7 @@ library(SnowballC)
 library(wordcloud)
 library(NLP)
 library(textrank)
-
+library(igraph)
 
 if(! require(magick)){
   library(devtools)
@@ -368,11 +368,11 @@ dev.off()
 ### nota: puoi fare un super graph con mille mila vertici e ancora di piu' bordi
 ### pero' forse sarebbe meglio un graph avente le connessioni solo per un gruppo
 ### interessante di parole, tipo le top 20 trovate precedentemente. 
-create_text_graph(POS_tagged_terms$word, 
+word_graph <- create_text_graph(POS_tagged_terms$word, 
                   search_window=10, # for each vertex will add 20 edges (search_window*2)
                   key_words=as.character( head(d_tagged[,1], 20) ), key_words_edge_mod = 5.0) 
 
 
-doc_list%>%filter(Doc.Index==360)%>%print(width=Inf)
+##doc_list%>%filter(Doc.Index==360)%>%print(width=Inf)
 
 ### Approach #2: key phrase extraction with textrank
