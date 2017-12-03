@@ -317,7 +317,7 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
   ### now add a PoS tag to each word
   annotation2 <- NLP::annotate(s, openNLP::Maxent_POS_Tag_Annotator(), annotation1)
   annotation2w <- annotation2[annotation2$type == "word"]
-
+  
   ### extract the bare POS tags from this diabolic NLP::Annotation object
   POStags <- sapply(annotation2w$features, '[[', "POS", USE.NAMES = FALSE)
   
@@ -340,7 +340,7 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
     POStags <- POStags[thisPOSindex]
     words_tags <-  words_tags[thisPOSindex,]
   }
-
+  
   if (!is.null(POS_blacklist) ){
     thisPOSindex <- integer()
     for(iP in POS_blacklist){
@@ -351,16 +351,16 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
     tok_words <- tok_words[-thisPOSindex]
     POStags <- POStags[-thisPOSindex]
   }
-
+  
   ### group by sentence id and rebuild original sentences.  
   ### add PoS tag to each word in the untokenized corpus  
   
   tagged_sentences <- words_tags %>% dplyr::group_by(sentence_id) %>%
-                      dplyr::summarise(orig_sentence = rebuild_sentences_with_POS(word,tag) )
+    dplyr::summarise(orig_sentence = rebuild_sentences_with_POS(word,tag) )
   
   ### split back to the original structure with one sentence by vector element
   return( list(POStagged = tagged_sentences$orig_sentence, 
-               POStags = select(words_tags, word,tag,sentence_id ) ) )
+               POStags = select(words_tags, word,tag,sentence_id ) ))
   
 }### end tagPOS
 
@@ -372,10 +372,10 @@ filter_words_POS <- function(all_terms, filter){
 
 
 get_word_links <- function(all_words, position, window, min_links=2) {
-  ### all_words is a tokenized set of word, i.e. a character vector with all the words 
-  ### I want to add in the graph.  
-  ### position is the index in all_terms of the word you are interested to.
-  ### width_window is a symmetric window around position of how many words before/after
+  ### all_words is a tokenized set of word, 
+  ### i.e. a character vector with all the words I want to add in the graph.  
+  ### The argument 'position' is the index in all_terms of the word you are interested to.
+  ### 'window' is a symmetric window around position of how many words before/after
   ### position to consider.
   ###
   
@@ -396,18 +396,40 @@ get_word_links <- function(all_words, position, window, min_links=2) {
   return(links)
 }### end get_word_links
 
-create_text_graph <- function(all_words, search_window) { 
+create_text_graph <- function(all_words, search_window, key_words=NULL) { 
   
-  ### all_words is a tokenized set of word, i.e. a character vector with all the words 
-  ### I want to add in the graph.  
+  ### 'all_words' is a tokenized set of word, i.e. a character vector  
+  ### with all the words I want to add in the graph.
+  ### Words in the initial list are connected by proximity 
+  ### (i.e. two words get linked if they are not separated by more than 'search_window' words)
   
   require(igraph)
+  print(paste("Creating a Text Graph from an initial list of ",n_terms,
+              " words, proximity search window size: ",search_window))
   word_graph <- igraph::graph.empty(0, directed=FALSE)
   i <- 1
   n_terms <- length(all_terms)
-
+  
+  process_all_words <- TRUE
+  if(!is.null(key_words)){
+    if(class(key_words)=='character'){
+      writeLines("\nWARNING! create_text_graph will restrict the text graph only to the user-selected whitelist of key words.\n")
+      process_all_words <- FALSE
+    }else{
+      writeLines("\nWARNING! User tried to pass a whitelist of key words to create_text_graph but argument class is not character. Ignoring it.\n")
+    }
+  }
+  
   ### we loop over all the words in the list 
   while (i < n_terms ) {
+    
+    ### if the user provided a whitelist of key words, skip this word
+    ### unless it is in the whitelist
+    if(!process_all_words){
+      if( ! all_words[i] %in% key_words){
+        next
+      }  
+    }
     
     if (i%%1000==1){
       print(paste("Creating vertexes and edges for word ",i," / ",n_terms))
@@ -417,7 +439,7 @@ create_text_graph <- function(all_words, search_window) {
     ### The width of the search window is defined by the user.
     links <- get_word_links(i,search_window)                                
     if (links[1] != "") {                                     
-      #cat(i," ",words[i]," - ",paste(c(links),collapse=" "),"\n")
+      #cat(i," ",all_words[i]," - ",paste(c(links),collapse=" "),"\n")
       
       ### If it is the first time we encounter the word under scrutiny, we add it
       ### to the list of vertices of the graph.
