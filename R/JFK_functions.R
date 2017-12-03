@@ -276,8 +276,11 @@ check_corpus_non_empty <- function(c){
 
 
 
-tag_POS <-  function( untagged_sentences, POS_whitelist=NULL) {
+tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL) {
   
+  ### Performs Part-of-Speech tagging of sentences
+  ### see https://en.wikipedia.org/wiki/Part-of-speech_tagging
+  ###
   ### takes as input a character vector, each element is a whole untokenized sentence.
   ### Converts it to a NLP::String
   ### Runs openNLP functions to annotate each term 
@@ -314,7 +317,18 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL) {
     s <- s[thisPOSindex]
     POStags <- POStags[thisPOSindex]
   }
+
+  if (!is.null(POS_blacklist) ){
+    thisPOSindex <- integer()
+    for(iP in POS_blacklist){
+      tmpPOSindex <- grep(iP, POStags)
+      thisPOSindex <- c(thisPOSindex , tmpPOSindex)
+    }
+    s <- s[-thisPOSindex]
+    POStags <- POStags[-thisPOSindex]
+  }
   
+    
   POStagged <- paste(sprintf("%s/%s", s, POStags), collapse = " ")
   return( list(POStagged = POStagged, POStags = POStags) )
   
