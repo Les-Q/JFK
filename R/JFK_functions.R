@@ -365,7 +365,8 @@ tag_POS <-  function( untagged_sentences, POS_whitelist=NULL, POS_blacklist=NULL
 }### end tagPOS
 
 
-filter_words_POS <- function(all_terms, filter){
+filter_edge_words <- function(all_terms, filter){
+  warning("Warning from filter_edge_words: not yet implemented")
   filtered <- all_terms
   return( filtered)
 }
@@ -384,8 +385,8 @@ get_word_links <- function(all_words, position, window, min_links=2) {
   end_window <- ifelse(position+window>length(all_terms),length(all_terms),position + window)
   links <- all_words[start_window, end_window]
   
-  ### not yet implemented: keep as edges only certain types of words
-  ### links <- filter_words_POS(links, my_filters)
+  ### not yet implemented: keep only certain types of words
+  ### links <- filter_edge_words(links, my_filters)
   
   if (length(links)>=min_links) {
     links[min_links:length(links)]
